@@ -18,7 +18,7 @@ module.exports = (sequelize, Sequelize) => {
             defaultValue: 'Locked'
         },
         due_date: {
-            type: Sequelize.DATEONLY, 
+            type: Sequelize.DATEONLY,
             allowNull: true
         }
     }, {

@@ -25,15 +25,28 @@ module.exports = (sequelize, Sequelize) => {
             type: Sequelize.BOOLEAN,
             defaultValue: false
         },
-        frozen_by_faculty_id: Sequelize.STRING(7),
-        frozen_at: Sequelize.DATE,
-        approved_by_faculty_id: Sequelize.STRING(7),
-        approved_at: Sequelize.DATE
+        frozen_by_faculty_id: {
+            type: Sequelize.STRING(7),
+            defaultValue: null
+        },
+        frozen_at: {
+            type: Sequelize.DATE,
+            defaultValue: null
+        },
+        approved_by_faculty_id: {
+            type: Sequelize.STRING(7),
+            defaultValue: null
+        },
+        approved_at: {
+            type: Sequelize.DATE,
+            defaultValue: null
+        }
     }, {
         tableName: 'Milestones',
         timestamps: true,
         createdAt: 'created_at',
         updatedAt: 'updated_at'
     });
+
     return Milestone;
 };

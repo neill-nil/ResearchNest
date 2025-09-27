@@ -11,9 +11,13 @@ module.exports = (sequelize, Sequelize) => {
         email: {
             type: Sequelize.STRING(100),
             allowNull: false,
-            unique: true
+            unique: true,
+            validate: { isEmail: true }
         },
-        program: Sequelize.STRING(50),
+        program: {
+            type: Sequelize.STRING(50),
+            allowNull: true
+        },
         password_hash: {
             type: Sequelize.STRING(255),
             allowNull: false
@@ -24,5 +28,6 @@ module.exports = (sequelize, Sequelize) => {
         createdAt: 'created_at',
         updatedAt: 'updated_at'
     });
+
     return Student;
 };

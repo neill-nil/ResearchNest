@@ -37,7 +37,7 @@ module.exports = (sequelize, Sequelize) => {
         tableName: 'FacultyNotes',
         timestamps: true,
         createdAt: 'created_at',
-        updatedAt: false 
+        updatedAt: false
     });
 
     return FacultyNote;

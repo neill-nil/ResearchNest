@@ -11,18 +11,23 @@ module.exports = (sequelize, Sequelize) => {
         email: {
             type: Sequelize.STRING(100),
             allowNull: false,
-            unique: true
+            unique: true,
+            validate: { isEmail: true }
         },
         password_hash: {
             type: Sequelize.STRING(255),
             allowNull: false
         },
-        department: Sequelize.STRING(100)
+        department: {
+            type: Sequelize.STRING(100),
+            allowNull: true
+        }
     }, {
         tableName: 'Faculty',
         timestamps: true,
         createdAt: 'created_at',
-        updatedAt: false 
+        updatedAt: false
     });
+
     return Faculty;
 };
