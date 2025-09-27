@@ -4,10 +4,10 @@ const cors = require('cors');
 const db = require('./models'); // Imports the index.js from models
 
 // Import routes
-const authRoutes = require('./api/routes/auth.routes');
-const milestoneRoutes = require('./api/routes/milestones.routes');
-const progressRoutes = require('./api/routes/progress.routes');
-
+const authRoutes = require('./api/routes/authRoutes');
+const milestoneRoutes = require('./api/routes/milestonesRoutes');
+const progressRoutes = require('./api/routes/progressRoutes');
+const noteRoutes = require('./api/routes/notesRoutes');
 
 const app = express();
 
