@@ -14,7 +14,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api/stages', stageRoutes);
+
 // Health check route
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to ResearchNest API.' });
@@ -23,7 +23,7 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/users', userRoutes);
 app.use('/api/milestones', milestoneRoutes);
-
+app.use('/api/stages', stageRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
