@@ -91,7 +91,8 @@ exports.login = async (req, res) => {
             {
                 id: user.student_id || user.faculty_id,
                 email: user.email,
-                role
+                role,
+                ...(role === "faculty" && { department: user.department })
             },
             JWT_SECRET,
             { expiresIn: "1h" }
