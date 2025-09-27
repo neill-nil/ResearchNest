@@ -4,10 +4,7 @@ const cors = require('cors');
 const db = require('./models'); 
 
 // Routes
-const authRoutes = require('./api/routes/authRoutes');
-const milestoneRoutes = require('./api/routes/milestonesRoutes');
-const progressRoutes = require('./api/routes/progressRoutes');
-const noteRoutes = require('./api/routes/notesRoutes');
+const userRoutes = require('./api/routes/userRoutes');
 
 const app = express();
 
@@ -22,9 +19,8 @@ app.get('/', (req, res) => {
 });
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/milestones', milestoneRoutes);
-app.use('/api/progress', progressRoutes);
+app.use('/api/users', userRoutes);
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
