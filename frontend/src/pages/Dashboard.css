@@ -1,0 +1,61 @@
+.dashboard-container {
+    width: 100%;
+    max-width: 900px;
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-title {
+    margin-top: 0;
+    color: #333;
+    font-size: 1.8rem;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+.dashboard-subtitle {
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.milestones-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+
+.student-selector-container {
+    margin: 1.5rem 0;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 6px;
+    display: flex;
+    flex-wrap: wrap; 
+    align-items: center;
+    gap: 1rem;
+}
+
+.student-selector-container label {
+    font-weight: 600;
+    color: #555;
+    margin-right: -0.5rem; 
+}
+
+.student-selector-container select,
+.student-selector-container input { 
+    padding: 0.5rem;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    min-width: 200px;
+    font-size: 1rem;
+}
+
+.student-selector-container select:focus,
+.student-selector-container input:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
