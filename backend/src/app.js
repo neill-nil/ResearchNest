@@ -7,13 +7,14 @@ const db = require('./models');
 const userRoutes = require('./api/routes/userRoutes');
 const milestoneRoutes = require('./api/routes/milestoneRoutes');
 
+const stageRoutes = require('./api/routes/stagesRoutes.js'); 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.use('/api/stages', stageRoutes);
 // Health check route
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to ResearchNest API.' });
