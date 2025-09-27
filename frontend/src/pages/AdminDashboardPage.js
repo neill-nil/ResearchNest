@@ -10,7 +10,7 @@ const AdminDashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Effect 1: Fetch the list of all students only once on component mount
+ 
   useEffect(() => {
     const students = getAllStudents();
     setAllStudents(students);
@@ -21,32 +21,29 @@ const AdminDashboardPage = () => {
     }
   }, []);
 
-  // Filter students based on the search query
+
   const filteredStudents = allStudents.filter(student =>
     student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (student.studentId && student.studentId.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // Effect 2 (THE FIX): Synchronize the selected student with the filtered list.
-  // This runs whenever the search query (and thus the filtered list) changes.
   useEffect(() => {
     const isSelectedStudentInFilteredList = filteredStudents.some(student => student.id === selectedStudentId);
 
-    // If the current selection is not in the filtered list, update it.
+
     if (!isSelectedStudentInFilteredList) {
       if (filteredStudents.length > 0) {
-        // Automatically select the first student in the new filtered list
+    
         setSelectedStudentId(filteredStudents[0].id);
       } else {
-        // If the search results in no students, clear the selection
+      
         setSelectedStudentId('');
       }
     }
-  }, [searchQuery, filteredStudents]); // Dependency array ensures this runs when the filter changes
+  }, [searchQuery, filteredStudents]); 
 
 
-  // Effect 3: Fetch data for the selected student whenever the selection changes.
-  // This is now correctly triggered by both manual selection and the auto-selection from Effect 2.
+
   useEffect(() => {
     if (!selectedStudentId) {
         setStudentData(null);

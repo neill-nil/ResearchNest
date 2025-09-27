@@ -6,17 +6,22 @@ const RegistrationPage = ({ onRegister }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [studentId, setStudentId] = useState(''); 
   const [role, setRole] = useState('student');
+  const [studentId, setStudentId] = useState('');
+  const [programme, setProgramme] = useState('');
+  const [department, setDepartment] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (name && email && password && role && (role === 'admin' || studentId)) {
-      onRegister({ name, email, password, role, studentId });
+    const isStudentValid = role === 'student' && studentId && programme;
+    const isAdminValid = role === 'admin' && department;
+
+    if (name && email && password && (isStudentValid || isAdminValid)) {
+      onRegister({ name, email, password, role, studentId, programme, department });
     } else {
-      alert('Please fill out all fields, including Student ID for students.');
+      alert('Please fill out all required fields.');
     }
   };
 
@@ -28,50 +33,15 @@ const RegistrationPage = ({ onRegister }) => {
         <form onSubmit={handleSubmit}>
           <div className="input-group">
             <label htmlFor="name">Full Name</label>
-            <input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., John Doe"
-              required
-            />
+            <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., John Doe" required />
           </div>
           <div className="input-group">
             <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g., student@example.com"
-              required
-            />
+            <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g., student@example.com" required />
           </div>
-           {/* Conditionally render Student ID input only if role is 'student' */}
-          {role === 'student' && (
-            <div className="input-group">
-                <label htmlFor="studentId">Student ID</label>
-                <input
-                type="text"
-                id="studentId"
-                value={studentId}
-                onChange={(e) => setStudentId(e.target.value)}
-                placeholder="e.g., S2023001"
-                required
-                />
-            </div>
-           )}
           <div className="input-group">
             <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Choose a strong password"
-              required
-            />
+            <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Choose a strong password" required />
           </div>
            <div className="input-group">
             <label htmlFor="role">I am a</label>
@@ -80,6 +50,29 @@ const RegistrationPage = ({ onRegister }) => {
                 <option value="admin">Faculty/Admin</option>
             </select>
           </div>
+
+          {/* Conditional Fields for Student */}
+          {role === 'student' && (
+            <>
+              <div className="input-group">
+                <label htmlFor="studentId">Student ID</label>
+                <input type="text" id="studentId" value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="e.g., S12345" required={role === 'student'} />
+              </div>
+              <div className="input-group">
+                <label htmlFor="programme">Programme</label>
+                <input type="text" id="programme" value={programme} onChange={(e) => setProgramme(e.target.value)} placeholder="e.g., M.Tech CSE" required={role === 'student'} />
+              </div>
+            </>
+          )}
+
+          {/* Conditional Field for Faculty/Admin */}
+          {role === 'admin' && (
+            <div className="input-group">
+              <label htmlFor="department">Department</label>
+              <input type="text" id="department" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g., Computer Science" required={role === 'admin'} />
+            </div>
+          )}
+
           <button type="submit" className="register-button">Create Account</button>
         </form>
         <div className="navigation-link">
