@@ -6,8 +6,10 @@ const db = require('./models');
 // Routes
 const userRoutes = require('./api/routes/userRoutes');
 const milestoneRoutes = require('./api/routes/milestoneRoutes');
+const stageRoutes = require('./api/routes/stagesRoutes.js');
+const noteRoutes = require('./api/routes/noteRoutes');
 
-const stageRoutes = require('./api/routes/stagesRoutes.js'); 
+ 
 const app = express();
 
 // Middleware
@@ -24,6 +26,7 @@ app.get('/', (req, res) => {
 app.use('/api/users', userRoutes);
 app.use('/api/milestones', milestoneRoutes);
 app.use('/api/stages', stageRoutes);
+app.use('/api/notes', noteRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

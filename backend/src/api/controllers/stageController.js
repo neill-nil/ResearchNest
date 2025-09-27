@@ -58,9 +58,6 @@ exports.getStagesByMilestone = async (req, res) => {
 
 exports.updateStageStatus = async (req, res) => {
     try {
-        if (req.user.role !== 'student') {
-            return res.status(403).json({ message: "Only students can update stage status." });
-        }
 
         const { id } = req.params;
         const { status } = req.body;
