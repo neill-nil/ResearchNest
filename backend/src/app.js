@@ -1,18 +1,40 @@
-import express from "express";
-import mongoose from "mongoose";
-import cors from "cors";
-import dotenv from "dotenv";
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const db = require('./models'); // Imports the index.js from models
 
-dotenv.config();
+// Import routes
+const authRoutes = require('./api/routes/auth.routes');
+const milestoneRoutes = require('./api/routes/milestones.routes');
+const progressRoutes = require('./api/routes/progress.routes');
+
 
 const app = express();
+
+// Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// sample route
-app.get("/", (req, res) => {
-  res.json({ message: "Backend running!" });
+// Test Route
+app.get('/', (req, res) => {
+    res.json({ message: 'Welcome to ResearchNest API.' });
 });
 
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/milestones', milestoneRoutes);
+app.use('/api/progress', progressRoutes);
+
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Sync database and start server
+db.sequelize.sync().then(() => {
+    console.log('Database synced successfully.');
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}.`);
+    });
+}).catch(err => {
+    console.error('Failed to sync database:', err);
+});
