@@ -22,7 +22,7 @@ module.exports = (sequelize, Sequelize) => {
         tableName: 'Faculty',
         timestamps: true,
         createdAt: 'created_at',
-        updatedAt: false // Schema doesn't have updated_at
+        updatedAt: false 
     });
     return Faculty;
 };
