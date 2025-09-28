@@ -16,9 +16,9 @@ const getModel = (role) => {
 
 exports.register = async (req, res) => {
     try {
-        const { role, id, name, email, program, department, password } = req.body;
+        const { role, name, email, program, department, password } = req.body;
 
-        if (!role || !email || !password) {
+        if (!role || !email || !password || !name) {
             return res.status(400).json({ message: "Missing required fields" });
         }
 
@@ -31,21 +31,45 @@ exports.register = async (req, res) => {
         let newUser;
 
         if (role === "student") {
+            // Generate new student_id (2025XXXX)
+            const latestStudent = await Model.findOne({
+                order: [['student_id', 'DESC']]
+            });
+
+            let newId = "20250001";
+            if (latestStudent) {
+                const lastNum = parseInt(latestStudent.student_id.slice(4));
+                newId = "2025" + String(lastNum + 1).padStart(4, '0');
+            }
+
             newUser = await Model.create({
-                student_id: id,
+                student_id: newId,
                 name,
                 email,
                 program,
                 password_hash
             });
-        } else {
+        } else if (role === "faculty") {
+            // Generate new faculty_id (2000XXX)
+            const latestFaculty = await Model.findOne({
+                order: [['faculty_id', 'DESC']]
+            });
+
+            let newId = "2000001";
+            if (latestFaculty) {
+                const lastNum = parseInt(latestFaculty.faculty_id.slice(4));
+                newId = "2000" + String(lastNum + 1).padStart(3, '0');
+            }
+
             newUser = await Model.create({
-                faculty_id: id,
+                faculty_id: newId,
                 name,
                 email,
                 department,
                 password_hash
             });
+        } else {
+            return res.status(400).json({ message: "Invalid role" });
         }
 
         return res.status(201).json({
