@@ -7,14 +7,15 @@ const LoginPage = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (email && password) {
-      onLogin({ email, password });
-    } else {
-      alert('Please enter email and password.');
-    }
-  };
+const handleSubmit = async (e) => { // Make the function async
+  e.preventDefault();
+  if (email && password) {
+    // The onLogin function (passed from App.js) will now handle the async call
+    onLogin({ email, password, role: 'student' }); // Assuming role for now, you might need a role selector
+  } else {
+    alert('Please enter email and password.');
+  }
+};
 
   return (
     <div className="login-container">

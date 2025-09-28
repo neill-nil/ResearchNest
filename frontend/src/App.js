@@ -1,86 +1,104 @@
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
-import React, { useState } from 'react';
-import ProfileMenu from './components/ProfileMenu';
-import ProfileModal from './components/ProfileModal';
-import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
+// Import Pages
 import LoginPage from './pages/LoginPage';
+import RegistrationPage from './pages/RegistrationPage';
 import StudentDashboardPage from './pages/StudentDashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
-import RegistrationPage from './pages/RegistrationPage';
-import { registerUser, getUserByEmail } from './services/api';
-import './App.css';
+
+// Import Components 
+import ProfileMenu from './components/ProfileMenu';
+import ProfileModal from './components/ProfileModal';
+
+// Import API services
+import { loginUser, registerUser, logoutUser, getLoggedInUser } from './services/api';
 
 function App() {
   const [user, setUser] = useState(null);
-  const [showProfile, setShowProfile] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isProfileModalOpen, setProfileModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (credentials) => {
-    const foundUser = getUserByEmail(credentials.email);
-    if (foundUser) {
-      setUser({
-        email: foundUser.email,
-        role: foundUser.role,
-        name: foundUser.name,
-        studentId: foundUser.studentId,
-        programme: foundUser.programme,
-        department: foundUser.department
-      });
-    } else {
-      alert('Login failed: No user found with that email.');
+  useEffect(() => {
+    const loggedInUser = getLoggedInUser();
+    if (loggedInUser) {
+      setUser(loggedInUser);
+    }
+    setLoading(false);
+  }, []);
+
+  const handleLogin = async (credentials) => {
+    try {
+      const response = await loginUser(credentials);
+      setUser(response.user);
+      if (response.user.role === 'student') {
+        navigate('/dashboard');
+      } else {
+        navigate('/admin-dashboard');
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
+      alert(errorMessage);
+    }
+  };
+  
+  const handleRegister = async (userData) => {
+    try {
+      const response = await registerUser(userData);
+      alert(response.message || "Registration successful!");
+      navigate('/login');
+    } catch (error) {
+      // --- THIS IS THE UPDATED PART ---
+      // Check if the error object has a detailed message from the backend
+      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+      alert(errorMessage); // This will now show the specific error
     }
   };
 
   const handleLogout = () => {
+    logoutUser();
     setUser(null);
-    setShowProfile(false);
+    navigate('/login');
   };
+  
+  const handleProfileClick = () => setProfileModalOpen(true);
+  const handleCloseModal = () => setProfileModalOpen(false);
 
-  const handleRegistration = (userData) => {
-    const { success, user: newUser, message } = registerUser(userData);
-    if (success) {
-      alert('Registration successful! Please log in with your credentials.');
-      navigate('/login');
-    } else {
-      alert(`Registration failed: ${message}`);
-    }
-  };
+  if (loading) {
+    return <div>Loading Application...</div>;
+  }
 
   return (
     <div className="app-container">
       <header className="app-header">
         <h1>ResearchNest</h1>
-        {user && (
-          <ProfileMenu
-            user={user}
-            onLogout={handleLogout}
-            onProfileClick={() => setShowProfile(true)}
-          />
-        )}
+        {user && <ProfileMenu user={user} onLogout={handleLogout} onProfileClick={handleProfileClick} />}
       </header>
-      <main className="app-main">
+      
+      <main>
         <Routes>
-          <Route path="/login" element={user ? <Navigate to={`/${user.role}/dashboard`} /> : <LoginPage onLogin={handleLogin} />} />
-          <Route path="/register" element={user ? <Navigate to={`/${user.role}/dashboard`} /> : <RegistrationPage onRegister={handleRegistration} />} />
+          <Route path="/login" element={!user ? <LoginPage onLogin={handleLogin} /> : <Navigate to={user.role === 'student' ? "/dashboard" : "/admin-dashboard"} />} />
+          <Route path="/register" element={!user ? <RegistrationPage onRegister={handleRegister} /> : <Navigate to="/dashboard" />} />
+          
           <Route 
-            path="/student/dashboard" 
-            element={user && user.role === 'student' ? <StudentDashboardPage userEmail={user.email} /> : <Navigate to="/login" />} 
+            path="/dashboard" 
+            element={user && user.role === 'student' ? <StudentDashboardPage user={user} /> : <Navigate to="/login" />} 
           />
+          
           <Route 
-            path="/admin/dashboard" 
-            element={user && user.role === 'admin' ? <AdminDashboardPage /> : <Navigate to="/login" />} 
+            path="/admin-dashboard" 
+            element={user && (user.role === 'faculty' || user.role === 'admin') ? <AdminDashboardPage user={user} /> : <Navigate to="/login" />}
           />
-          {/* Default route redirects authenticated users to their dashboard, others to login */}
-          <Route path="*" element={<Navigate to={user ? `/${user.role}/dashboard` : "/login"} />} />
+          
+          <Route path="*" element={<Navigate to={user ? (user.role === 'student' ? "/dashboard" : "/admin-dashboard") : "/login"} />} />
         </Routes>
-        {showProfile && (
-          <ProfileModal user={user} onClose={() => setShowProfile(false)} />
-        )}
       </main>
+
+      {isProfileModalOpen && <ProfileModal user={user} onClose={handleCloseModal} />}
     </div>
   );
 }
-
 
 export default App;
 

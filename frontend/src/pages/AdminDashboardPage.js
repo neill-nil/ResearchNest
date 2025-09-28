@@ -1,78 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import { getStudentDataById, updateStudentData, overrideMilestoneStatus, getAllStudents } from '../services/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+    getAllStudentsForFaculty, 
+    getStudentProgress, 
+    approveMilestone 
+} from '../services/api';
 import Milestone from '../components/Milestone';
 import './Dashboard.css';
 
-const AdminDashboardPage = () => {
+const AdminDashboardPage = ({ user }) => {
   const [allStudents, setAllStudents] = useState([]);
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [studentData, setStudentData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
- 
+  // Fetch the list of all students for this faculty member
   useEffect(() => {
-    const students = getAllStudents();
-    setAllStudents(students);
-    if (students.length > 0) {
-      setSelectedStudentId(students[0].id);
-    } else {
-      setLoading(false);
-    }
-  }, []);
+    const fetchStudents = async () => {
+        try {
+            // Use the logged-in faculty's ID to get their students
+            const students = await getAllStudentsForFaculty(user.id);
+            setAllStudents(students);
+            // If students are found, select the first one by default
+            if (students.length > 0) {
+              setSelectedStudentId(students[0].id); 
+            }
+        } catch (error) {
+            console.error("Failed to fetch students:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+    fetchStudents();
+  }, [user.id]);
 
-
-  const filteredStudents = allStudents.filter(student =>
-    student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (student.studentId && student.studentId.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  useEffect(() => {
-    const isSelectedStudentInFilteredList = filteredStudents.some(student => student.id === selectedStudentId);
-
-
-    if (!isSelectedStudentInFilteredList) {
-      if (filteredStudents.length > 0) {
-    
-        setSelectedStudentId(filteredStudents[0].id);
-      } else {
-      
-        setSelectedStudentId('');
-      }
-    }
-  }, [searchQuery, filteredStudents]); 
-
-
-
-  useEffect(() => {
+  // Fetch the progress data for the currently selected student
+  const fetchStudentData = useCallback(async () => {
     if (!selectedStudentId) {
         setStudentData(null);
-        setLoading(false);
         return;
     }
     setLoading(true);
-    const data = getStudentDataById(selectedStudentId);
-    setStudentData(data);
-    setLoading(false);
+    try {
+        const data = await getStudentProgress(selectedStudentId);
+        // Transform data keys to match frontend component props (e.g., name -> title)
+        const transformedData = {
+          ...data,
+          milestones: data.milestones.map(m => ({
+              ...m, id: m.milestone_id, title: m.name,
+              stages: m.Stages.map(s => ({
+                  ...s, id: s.stage_id, title: s.name,
+                  tasks: s.Tasks.map(t => ({
+                      ...t, id: t.task_id, title: t.name,
+                      subtasks: t.Subtasks.map(st => ({ ...st, id: st.subtask_id, title: st.name }))
+                  }))
+              }))
+          }))
+        };
+        setStudentData(transformedData);
+    } catch (error) {
+        console.error("Failed to fetch student progress:", error);
+        setStudentData(null);
+    } finally {
+        setLoading(false);
+    }
   }, [selectedStudentId]);
-
-  const handleStatusChange = (path, newStatus) => {
-    const updatedData = updateStudentData(selectedStudentId, path, newStatus);
-    setStudentData(updatedData);
-  };
-
-  const handleOverride = (milestonePath) => {
-      const updatedData = overrideMilestoneStatus(selectedStudentId, milestonePath);
-      setStudentData(updatedData);
-  }
   
-  const handleStudentSelect = (e) => {
-      setSelectedStudentId(e.target.value);
+  useEffect(() => {
+      fetchStudentData();
+  }, [fetchStudentData]);
+
+  // Handler for the "Override" button on a milestone
+  const handleOverride = async (milestoneId) => {
+      try {
+          await approveMilestone(milestoneId);
+          // Re-fetch data to show the updated statuses
+          fetchStudentData();
+      } catch (error) {
+          console.error("Failed to approve milestone:", error);
+          alert("Could not approve the milestone. Please try again.");
+      }
   }
 
-  const handleSearchChange = (e) => {
-      setSearchQuery(e.target.value);
-  }
+  // Filter students based on search query
+  const filteredStudents = allStudents.filter(student =>
+    student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (student.id && student.id.toString().toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   return (
     <div className="dashboard-container">
@@ -85,17 +99,16 @@ const AdminDashboardPage = () => {
             id="student-search"
             placeholder="By name or ID..."
             value={searchQuery}
-            onChange={handleSearchChange}
+            onChange={(e) => setSearchQuery(e.target.value)}
         />
         <label htmlFor="student-select">Select from list:</label>
-        <select id="student-select" value={selectedStudentId} onChange={handleStudentSelect}>
-          {/* If there are no results, show a disabled option */}
+        <select id="student-select" value={selectedStudentId} onChange={(e) => setSelectedStudentId(e.target.value)}>
           {filteredStudents.length === 0 ? (
             <option value="" disabled>No students found</option>
           ) : (
             filteredStudents.map(student => (
               <option key={student.id} value={student.id}>
-                {student.name} ({student.studentId})
+                {student.name} ({student.id})
               </option>
             ))
           )}
@@ -113,20 +126,18 @@ const AdminDashboardPage = () => {
                 key={milestone.id}
                 milestone={milestone}
                 milestoneIndex={index}
-                onStatusChange={handleStatusChange}
-                isLocked={false}
+                isLocked={false} // Admins see everything as unlocked
                 isAdmin={true}
-                onOverride={handleOverride}
+                onOverride={() => handleOverride(milestone.id)} // Pass the ID to the handler
               />
             ))}
           </div>
         </>
       ) : (
-        <p>Please register a new student or select one from the list to view their progress.</p>
+        <p>Please select a student to view their progress.</p>
       )}
     </div>
   );
 };
 
 export default AdminDashboardPage;
-

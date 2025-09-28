@@ -1,178 +1,99 @@
-// --- MOCK DATABASE HELPERS ---
+import axios from 'axios';
 
-// Gets the database from localStorage or initializes it with default data
-const getDb = () => {
-    const db = localStorage.getItem('mockResearchNestDb');
-    if (!db) {
-        const defaultDb = {
-          student123: {
-            id: "student123",
-            email: "student@example.com",
-            name: "Jane Doe (Default)",
-            role: "student",
-            studentId: "S001",
-            programme: "Ph.D. in AI",
-            department: null,
-            milestones: [
-              { id: "m1", title: "Course Completion", status: "In Progress", stages: [
-                  { id: "s1_1", title: "Research Methods", status: "In Progress", tasks: [
-                      { id: "t1_1_1", title: "Research Paper Submission", status: "In Progress", subtasks: [
-                          { id: "st1_1_1_1", title: "Draft Abstract", status: "Completed" },
-                          { id: "st1_1_1_2", title: "Collect References", status: "In Progress" },
-                        ],
-                      },
-                      { id: "t1_1_2", title: "Tutorial Presentation", status: "Locked", subtasks: [] },
-                    ],
-                  },
-                  { id: "s1_2", title: "Advanced Databases", status: "Locked", tasks: [{ id: "t1_2_1", title: "Assignment 1", status: "Locked", subtasks: [] }],
-                  },
-                ],
-              },
-              { id: "m2", title: "Thesis Submission", status: "Locked", stages: [
-                  { id: "s2_1", title: "Proposal Approval", status: "Locked", tasks: [{ id: "t2_1_1", title: "Write Literature Review", status: "Locked", subtasks: [] }],
-                  },
-                ],
-              },
-            ],
-          },
-        };
-        saveDb(defaultDb);
-        return defaultDb;
+// Create an Axios instance to communicate with the backend
+const api = axios.create({
+    baseURL: '/api' // This will be prefixed by the proxy in package.json
+});
+
+// Use an interceptor to automatically add the JWT token to all requests
+api.interceptors.request.use(config => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
-    return JSON.parse(db);
+    return config;
+}, error => {
+    return Promise.reject(error);
+});
+
+// --- AUTHENTICATION & USERS ---
+
+export const registerUser = async (userData) => {
+    const payload = {
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+      role: userData.role,
+      program: userData.programme, // Frontend 'programme' -> Backend 'program'
+    };
+    const response = await api.post('/users/register', payload);
+    return response.data;
 };
 
-// Saves the entire database object to localStorage
-const saveDb = (db) => {
-    localStorage.setItem('mockResearchNestDb', JSON.stringify(db));
-};
-
-// --- API FUNCTIONS ---
-
-export const registerUser = (userData) => {
-  const db = getDb();
-
-  if (Object.values(db).some(user => user.email === userData.email)) {
-    return { success: false, message: "An account with this email already exists." };
-  }
-  if (userData.role === 'student' && Object.values(db).some(user => user.studentId === userData.studentId)) {
-    return { success: false, message: "This Student ID is already taken." };
-  }
-
-  const newUserId = `user_${Date.now()}`;
-  const newUser = {
-    id: newUserId,
-    email: userData.email,
-    name: userData.name,
-    role: userData.role,
-    studentId: userData.studentId || null,
-    programme: userData.programme || null,
-    department: userData.department || null,
-    milestones: [
-      { id: "m1_new", title: "Initial Onboarding", status: "In Progress", stages: [
-          { id: "s1_1_new", title: "Account Setup", status: "In Progress", tasks: [
-              { id: "t1_1_1_new", title: "Complete Your Profile Information", status: "In Progress", subtasks: [] },
-              { id: "t1_1_2_new", title: "Review University Guidelines", status: "Locked", subtasks: [] }
-            ]
-          }
-        ]
-      }
-    ]
-  };
-
-  db[newUserId] = newUser;
-  saveDb(db);
-  
-  return { success: true, user: newUser, message: "Registration successful." };
-};
-
-export const getUserByEmail = (email) => {
-    const db = getDb();
-    return Object.values(db).find(user => user.email === email) || null;
-}
-
-export const getStudentDataByEmail = (email) => {
-    const student = getUserByEmail(email);
-    if (!student || student.role !== 'student') return null;
-    return JSON.parse(JSON.stringify(student));
-};
-
-export const getStudentDataById = (studentId) => {
-    const db = getDb();
-    const student = db[studentId];
-    return student ? JSON.parse(JSON.stringify(student)) : null;
-}
-
-export const getAllStudents = () => {
-    const db = getDb();
-    return Object.values(db).filter(user => user.role === 'student');
-}
-
-export const updateStudentData = (studentId, path, newStatus) => {
-  const db = getDb();
-  let student = db[studentId];
-  if (!student) return null;
-
-  let item;
-  if (path.subtaskIndex !== undefined) {
-    item = student.milestones[path.milestoneIndex].stages[path.stageIndex].tasks[path.taskIndex].subtasks[path.subtaskIndex];
-  } else if (path.taskIndex !== undefined) {
-    item = student.milestones[path.milestoneIndex].stages[path.stageIndex].tasks[path.taskIndex];
-  }
-  
-  if (item) item.status = newStatus;
-
-  recalculateAllStatuses(student);
-  saveDb(db);
-  return JSON.parse(JSON.stringify(student));
-};
-
-
-export const overrideMilestoneStatus = (studentId, path) => {
-    const db = getDb();
-    let student = db[studentId];
-    if (!student) return null;
-
-    const { milestoneIndex } = path;
-    const milestone = student.milestones[milestoneIndex];
-
-    if (milestone) {
-        milestone.status = "Completed";
-        milestone.stages.forEach(stage => {
-            stage.status = "Completed";
-            stage.tasks.forEach(task => {
-                task.status = "Completed";
-                task.subtasks.forEach(subtask => {
-                    subtask.status = "Completed";
-                });
-            });
-        });
+export const loginUser = async (credentials) => {
+    const response = await api.post('/users/login', credentials);
+    if (response.data.token) {
+        // Store token and user info upon successful login
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
     }
-
-    recalculateAllStatuses(student);
-    saveDb(db);
-    return JSON.parse(JSON.stringify(student));
+    return response.data;
 };
 
-// --- HELPER LOGIC ---
-const calculateParentStatus = (children) => {
-  if (!children || children.length === 0) return "Completed";
-  if (children.every((child) => child.status === "Completed")) return "Completed";
-  if (children.some((child) => child.status === "In Progress" || child.status === "Completed")) return "In Progress";
-  return "Locked";
+export const logoutUser = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
 };
 
-const recalculateAllStatuses = (student) => {
-  student.milestones.forEach((milestone) => {
-    milestone.stages.forEach((stage) => {
-      stage.tasks.forEach((task) => {
-        if (task.subtasks && task.subtasks.length > 0) {
-          task.status = calculateParentStatus(task.subtasks);
-        }
-      });
-      stage.status = calculateParentStatus(stage.tasks);
-    });
-    milestone.status = calculateParentStatus(milestone.stages);
-  });
+export const getLoggedInUser = () => {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
 };
 
+
+// --- DATA FETCHING ---
+
+/**
+ * Fetches all students associated with a specific faculty member's department.
+ * @param {string} facultyId - The ID of the faculty member.
+ */
+export const getAllStudentsForFaculty = async (facultyId) => {
+    const response = await api.get(`/faculty/${facultyId}/students`);
+    return response.data;
+};
+
+/**
+ * Fetches the entire progress hierarchy (milestones, stages, etc.) for a student.
+ * @param {string} studentId - The ID of the student.
+ */
+export const getStudentProgress = async (studentId) => {
+    const response = await api.get(`/progress/${studentId}`);
+    return response.data;
+};
+
+
+// --- DATA MODIFICATION ---
+
+/**
+ * Updates the status of a specific subtask.
+ * @param {number} subtaskId - The ID of the subtask.
+ * @param {string} newStatus - The new status (e.g., "Completed").
+ */
+export const updateSubtaskStatus = async (subtaskId, newStatus) => {
+    const response = await api.patch(`/subtasks/${subtaskId}`, { status: newStatus });
+    return response.data;
+};
+
+/**
+ * Approves a milestone, likely marking it and all its children as complete.
+ * This is an admin/faculty only action.
+ * @param {number} milestoneId - The ID of the milestone to approve.
+ */
+export const approveMilestone = async (milestoneId) => {
+    const response = await api.patch(`/milestones/${milestoneId}/approve`);
+    return response.data;
+};
+
+// NOTE: You can add more functions here as needed, for example:
+// export const updateTaskStatus = async (taskId, newStatus) => { ... };
+// export const createTask = async (taskData) => { ... };
