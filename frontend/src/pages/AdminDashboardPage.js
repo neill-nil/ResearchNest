@@ -8,9 +8,8 @@ import {
   createStage,
   deleteStage,
   createNote,
-  deleteNote,
   updateMilestoneStatus,
-  updateStageStatus,   // <-- add in services/api.js
+  updateStageStatus,
 } from '../services/api';
 import './Dashboard.css';
 
@@ -84,24 +83,25 @@ const AdminDashboardPage = ({ user }) => {
   }, []);
 
   // --- Fetch progress ---
+  const refreshProgress = async () => {
+    if (!selectedStudentId) {
+      setStudentData(null);
+      return;
+    }
+    try {
+      setLoading(true);
+      const data = await getStudentProgress(selectedStudentId);
+      setStudentData(transformProgressData(data));
+    } catch (err) {
+      setError(`Failed to fetch progress for student ${selectedStudentId}`);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchProgress = async () => {
-      if (!selectedStudentId) {
-        setStudentData(null);
-        return;
-      }
-      try {
-        setLoading(true);
-        const data = await getStudentProgress(selectedStudentId);
-        setStudentData(transformProgressData(data));
-      } catch (err) {
-        setError(`Failed to fetch progress for student ${selectedStudentId}`);
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProgress();
+    refreshProgress();
   }, [selectedStudentId]);
 
   // --- Milestone actions ---
@@ -118,8 +118,7 @@ const AdminDashboardPage = ({ user }) => {
         department: user.department,
         status: 'Locked',
       });
-      const data = await getStudentProgress(selectedStudentId);
-      setStudentData(transformProgressData(data));
+      await refreshProgress();
       setNewMilestoneName('');
     } catch {
       alert('Failed to create milestone.');
@@ -131,8 +130,7 @@ const AdminDashboardPage = ({ user }) => {
   const handleFreeze = async (milestoneId, freeze) => {
     try {
       await freezeMilestone(milestoneId, freeze);
-      const data = await getStudentProgress(selectedStudentId);
-      setStudentData(transformProgressData(data));
+      await refreshProgress();
     } catch {
       alert('Failed to update freeze status.');
     }
@@ -142,8 +140,7 @@ const AdminDashboardPage = ({ user }) => {
     if (window.confirm('Delete this milestone?')) {
       try {
         await deleteMilestone(milestoneId);
-        const data = await getStudentProgress(selectedStudentId);
-        setStudentData(transformProgressData(data));
+        await refreshProgress();
       } catch {
         alert('Failed to delete milestone.');
       }
@@ -154,28 +151,27 @@ const AdminDashboardPage = ({ user }) => {
   const handleCreateStage = async (milestoneId) => {
     if (!newStageName.trim()) return;
     await createStage({ milestone_id: milestoneId, name: newStageName });
-    const data = await getStudentProgress(selectedStudentId);
-    setStudentData(transformProgressData(data));
+    await refreshProgress();
     setNewStageName('');
   };
 
   const handleDeleteStage = async (stageId) => {
     if (window.confirm('Delete this stage?')) {
       await deleteStage(stageId);
-      const data = await getStudentProgress(selectedStudentId);
-      setStudentData(transformProgressData(data));
+      await refreshProgress();
     }
   };
 
   // --- Notes ---
   const handleAddNote = async (milestoneId) => {
     if (!newNote.trim()) return;
-    await createNote({ student_id: selectedStudentId, milestone_id: milestoneId, note: newNote });
+    await createNote({
+      student_id: selectedStudentId,
+      milestone_id: milestoneId,
+      note: newNote,
+    });
     setNewNote('');
-  };
-
-  const handleDeleteNote = async (noteId) => {
-    await deleteNote(noteId);
+    await refreshProgress(); // ✅ ensure notes refresh after add
   };
 
   // --- Filter students ---
@@ -236,12 +232,12 @@ const AdminDashboardPage = ({ user }) => {
               <div className="milestone-header">
                 <h3>Milestone: {m.title}</h3>
                 <div className="milestone-actions">
+                  {/* Milestone status dropdown */}
                   <select
                     value={m.status}
                     onChange={async (e) => {
                       await updateMilestoneStatus(m.id, e.target.value);
-                      const data = await getStudentProgress(selectedStudentId);
-                      setStudentData(transformProgressData(data));
+                      await refreshProgress();
                     }}
                     className="status-select"
                   >
@@ -281,12 +277,12 @@ const AdminDashboardPage = ({ user }) => {
                   <div className="stage-row">
                     <h4 className="stage-title">{st.title}</h4>
                     <div className="stage-actions">
+                      {/* Stage status dropdown */}
                       <select
                         value={st.status}
                         onChange={async (e) => {
                           await updateStageStatus(st.id, e.target.value);
-                          const data = await getStudentProgress(selectedStudentId);
-                          setStudentData(transformProgressData(data));
+                          await refreshProgress();
                         }}
                         className="status-select"
                       >

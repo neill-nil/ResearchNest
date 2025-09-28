@@ -1,14 +1,17 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || '/api'
+  baseURL: process.env.REACT_APP_API_BASE_URL || '/api',
 });
 
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-}, error => Promise.reject(error));
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 /* ------------------------- AUTH ------------------------- */
 export const registerUser = async (userData) => {
@@ -16,7 +19,7 @@ export const registerUser = async (userData) => {
     name: userData.name,
     email: userData.email,
     password: userData.password,
-    role: userData.role
+    role: userData.role,
   };
   if (userData.role === 'student') payload.program = userData.program || '';
   if (userData.role === 'faculty') payload.department = userData.department || '';
@@ -75,7 +78,7 @@ export const getStudentDashboard = async (studentId) => {
   const [progress, summary, notes] = await Promise.all([
     getStudentProgress(studentId),
     getStudentSummary(studentId),
-    getStudentNotes(studentId)
+    getStudentNotes(studentId),
   ]);
   return { progress, summary, notes };
 };
@@ -101,6 +104,12 @@ export const deleteMilestone = async (milestoneId) => {
   return response.data;
 };
 
+// ✅ Corrected to match backend route
+export const updateMilestoneStatus = async (milestoneId, status) => {
+  const response = await api.patch(`/milestones/${milestoneId}/status`, { status });
+  return response.data;
+};
+
 /* ------------------------- STAGES ------------------------- */
 export const createStage = async (stageData) => {
   const response = await api.post('/stages', stageData);
@@ -112,8 +121,9 @@ export const getStagesByMilestone = async (milestoneId) => {
   return response.data;
 };
 
-export const updateStage = async (stageId, updateData) => {
-  const response = await api.patch(`/stages/${stageId}`, updateData);
+// ✅ Corrected to include body { status }
+export const updateStageStatus = async (stageId, status) => {
+  const response = await api.patch(`/stages/${stageId}/status`, { status });
   return response.data;
 };
 
@@ -173,25 +183,4 @@ export const createNote = async (noteData) => {
 export const deleteNote = async (noteId) => {
   const response = await api.delete(`/notes/${noteId}`);
   return response.data;
-};
-// Update milestone status
-export const updateMilestoneStatus = async (milestoneId, status) => {
-  const res = await fetch(`/api/milestones/${milestoneId}/status`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
-  });
-  if (!res.ok) throw new Error("Failed to update milestone status");
-  return res.json();
-};
-
-// Update stage status
-export const updateStageStatus = async (stageId, status) => {
-  const res = await fetch(`/api/stages/${stageId}/status`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
-  });
-  if (!res.ok) throw new Error("Failed to update stage status");
-  return res.json();
 };
