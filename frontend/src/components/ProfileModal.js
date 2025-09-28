@@ -11,7 +11,7 @@ const ProfileModal = ({ user, onClose }) => {
           <p><strong>Name:</strong> {user.name || 'N/A'}</p>
           <p><strong>Email:</strong> {user.email}</p>
           <p><strong>Role:</strong> {user.role}</p>
-          {user.studentId && <p><strong>Student ID:</strong> {user.studentId}</p>}
+          
           {user.programme && <p><strong>Programme:</strong> {user.programme}</p>}
           {user.department && <p><strong>Department:</strong> {user.department}</p>}
         </div>
