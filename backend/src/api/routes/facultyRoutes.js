@@ -9,4 +9,7 @@ router.get('/:id/students', authenticateToken, facultyController.getStudentsInDe
 // List milestones in faculty's department
 router.get('/:id/milestones', authenticateToken, facultyController.getDepartmentMilestones);
 
+// List deparment wise all details
+router.get('/:id/progress', authenticateToken, facultyController.getDepartmentProgress);
+
 module.exports = router;
