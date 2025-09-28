@@ -1,4 +1,3 @@
-// src/pages/StudentDashboardPage.jsx
 import React, { useState, useEffect } from 'react';
 import {
   getStudentDashboard,
@@ -15,7 +14,7 @@ import Toast from '../components/Toast';
 import '../components/Toast.css';
 import '../styles/Dashboard.css';
 
-const transformData = (backendData) => {
+const transformData = (backendData, allNotes = []) => {
   if (!backendData || !Array.isArray(backendData.milestones)) return { milestones: [] };
 
   const transformSubtasks = (subtasks = []) =>
@@ -42,14 +41,17 @@ const transformData = (backendData) => {
     }));
 
   const transformMilestones = (milestones = []) =>
-    milestones.map((m) => ({
-      id: m.milestone_id,
-      title: m.name,
-      status: m.status,
-      stages: transformStages(m.Stages || []),
-      notes: m.Notes || [],
-      is_frozen: m.is_frozen || false,
-    }));
+    milestones.map((m) => {
+      const milestoneNotes = allNotes.filter((n) => n.milestone_id === m.milestone_id);
+      return {
+        id: m.milestone_id,
+        title: m.name,
+        status: m.status,
+        stages: transformStages(m.Stages || []),
+        notes: milestoneNotes,
+        is_frozen: m.is_frozen || false,
+      };
+    });
 
   return { ...backendData, milestones: transformMilestones(backendData.milestones || []) };
 };
@@ -82,12 +84,11 @@ const StudentDashboardPage = ({ user }) => {
 
     const { progress, summary: summ, notes: nd } = res.data;
 
-    setStudentData(transformData(progress || { milestones: [] }));
-    setSummary(summ || null);   // ← keep the summary from backend
+    setStudentData(transformData(progress || { milestones: [] }, nd || []));
+    setSummary(summ || null);
     setNotes(nd || []);
     setNewItemNames({});
   };
-
 
   useEffect(() => {
     const fetch = async () => {
@@ -231,42 +232,38 @@ const StudentDashboardPage = ({ user }) => {
 
       {/* Summary */}
       {summary && (
-      <div className="summary-card card-block">
-        <h3 className="summary-heading">Progress Summary</h3>
-        <div className="summary-grid">
-          
-          {/* Milestones */}
-          <div className="summary-section">
-            <div className="summary-header">
-              <span className="summary-label">Milestones</span>
-              <span className="summary-total">{summary.milestones?.total || 0}</span>
+        <div className="summary-card card-block">
+          <h3 className="summary-heading">Progress Summary</h3>
+          <div className="summary-grid">
+            {/* Milestones */}
+            <div className="summary-section">
+              <div className="summary-header">
+                <span className="summary-label">Milestones</span>
+                <span className="summary-total">{summary.milestones?.total || 0}</span>
+              </div>
+              <ul className="summary-list">
+                <li><span className="dot completed"></span>{summary.milestones?.byStatus?.Completed || 0} Completed</li>
+                <li><span className="dot progress"></span>{summary.milestones?.byStatus?.['In Progress'] || 0} In Progress</li>
+                <li><span className="dot pending"></span>{summary.milestones?.byStatus?.['Pending Approval'] || 0} Pending</li>
+                <li><span className="dot locked"></span>{summary.milestones?.byStatus?.Locked || 0} Locked</li>
+              </ul>
             </div>
-            <ul className="summary-list">
-              <li><span className="dot completed"></span>{summary.milestones?.byStatus?.Completed || 0} Completed</li>
-              <li><span className="dot progress"></span>{summary.milestones?.byStatus?.['In Progress'] || 0} In Progress</li>
-              <li><span className="dot pending"></span>{summary.milestones?.byStatus?.['Pending Approval'] || 0} Pending</li>
-              <li><span className="dot locked"></span>{summary.milestones?.byStatus?.Locked || 0} Locked</li>
-            </ul>
-          </div>
 
-          {/* Stages */}
-          <div className="summary-section">
-            <div className="summary-header">
-              <span className="summary-label">Stages</span>
-              <span className="summary-total">{summary.stages?.total || 0}</span>
+            {/* Stages */}
+            <div className="summary-section">
+              <div className="summary-header">
+                <span className="summary-label">Stages</span>
+                <span className="summary-total">{summary.stages?.total || 0}</span>
+              </div>
+              <ul className="summary-list">
+                <li><span className="dot completed"></span>{summary.stages?.byStatus?.Completed || 0} Completed</li>
+                <li><span className="dot progress"></span>{summary.stages?.byStatus?.['In Progress'] || 0} In Progress</li>
+                <li><span className="dot locked"></span>{summary.stages?.byStatus?.Locked || 0} Locked</li>
+              </ul>
             </div>
-            <ul className="summary-list">
-              <li><span className="dot completed"></span>{summary.stages?.byStatus?.Completed || 0} Completed</li>
-              <li><span className="dot progress"></span>{summary.stages?.byStatus?.['In Progress'] || 0} In Progress</li>
-              <li><span className="dot locked"></span>{summary.stages?.byStatus?.Locked || 0} Locked</li>
-            </ul>
           </div>
         </div>
-      </div>
-    )}
-
-
-
+      )}
 
       {/* Milestones */}
       <div className="milestones-list">
@@ -497,19 +494,18 @@ const StudentDashboardPage = ({ user }) => {
             ))}
 
             {/* Notes */}
-            {m.notes && m.notes.length > 0 && (
-              <div className="notes-section">
-                <h5>Faculty Notes</h5>
-                <ul>
-                  {m.notes.map((note) => (
-                    <li key={note.note_id}>
-                      <p style={{ margin: 0 }}>{note.note}</p>
-                      <div className="note-meta">{new Date(note.created_at).toLocaleString()}</div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div className="notes-section">
+              <h5>Faculty Notes</h5>
+              {m.notes && m.notes.length > 0 ? (
+                m.notes.map((note) => (
+                  <p key={note.note_id} className="note-meta">
+                    {note.note} — {new Date(note.created_at).toLocaleString()}
+                  </p>
+                ))
+              ) : (
+                <p className="note-meta">No notes yet.</p>
+              )}
+            </div>
           </div>
         ))}
       </div>

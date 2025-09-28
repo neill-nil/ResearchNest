@@ -18,7 +18,7 @@ import Toast from '../components/Toast';
 import '../styles/Dashboard.css';
 import '../components/Toast.jsx';
 
-const transformProgressData = (backendData) => {
+const transformProgressData = (backendData, allNotes = []) => {
   if (!backendData || !Array.isArray(backendData.milestones)) return { milestones: [] };
 
   const transformTasks = (tasks = []) =>
@@ -42,14 +42,17 @@ const transformProgressData = (backendData) => {
     }));
 
   const transformMilestones = (milestones = []) =>
-    milestones.map((m) => ({
-      id: m.milestone_id,
-      title: m.name,
-      status: m.status,
-      stages: transformStages(m.Stages || []),
-      notes: m.Notes || [],
-      department: m.department,
-    }));
+    milestones.map((m) => {
+      const milestoneNotes = allNotes.filter((n) => n.milestone_id === m.milestone_id);
+      return {
+        id: m.milestone_id,
+        title: m.name,
+        status: m.status,
+        stages: transformStages(m.Stages || []),
+        notes: milestoneNotes,
+        department: m.department,
+      };
+    });
 
   return { ...backendData, milestones: transformMilestones(backendData.milestones) };
 };
@@ -60,10 +63,10 @@ const AdminDashboardPage = ({ user }) => {
   const [studentData, setStudentData] = useState({ milestones: [] });
   const [newMilestoneName, setNewMilestoneName] = useState('');
   const [newStageName, setNewStageName] = useState('');
-  const [newNote, setNewNote] = useState('');
+  const [noteInputs, setNoteInputs] = useState({}); // per-milestone note input
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState([]);
-  const [busyOps, setBusyOps] = useState({});
+  const [busyOps, setBusyOps] = useState({}); // FIXED: use object, not array
 
   const pushToast = (message, type = 'info') => {
     const id = Date.now() + Math.random();
@@ -82,6 +85,7 @@ const AdminDashboardPage = ({ user }) => {
         if (list.length > 0) setSelectedStudentId(list[0].student_id);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const refreshProgress = async (sid = selectedStudentId) => {
@@ -92,7 +96,8 @@ const AdminDashboardPage = ({ user }) => {
       pushToast(res.error, 'error');
       setStudentData({ milestones: [] });
     } else {
-      setStudentData(transformProgressData(res.data));
+      // Pass notes (if any) so transformProgressData can attach them to milestones
+      setStudentData(transformProgressData(res.data, res.data?.notes || []));
     }
     setLoading(false);
   };
@@ -196,18 +201,21 @@ const AdminDashboardPage = ({ user }) => {
     }
   };
 
+  // Note: now per-milestone note input stored in noteInputs[milestoneId]
   const handleAddNote = async (milestoneId) => {
-    if (!newNote.trim()) {
+    const noteText = (noteInputs[milestoneId] || '').trim();
+    if (!noteText) {
       pushToast('Note cannot be empty', 'error');
       return;
     }
     setBusy(`createNote:${milestoneId}`, true);
-    const res = await createNote({ student_id: selectedStudentId, milestone_id: milestoneId, note: newNote });
+    const res = await createNote({ student_id: selectedStudentId, milestone_id: milestoneId, note: noteText });
     setBusy(`createNote:${milestoneId}`, false);
     if (res.error) pushToast(res.error, 'error');
     else {
       pushToast('Note added', 'success');
-      setNewNote('');
+      // clear only this milestone's input
+      setNoteInputs((prev) => ({ ...prev, [milestoneId]: '' }));
       await refreshProgress();
     }
   };
@@ -364,7 +372,7 @@ const AdminDashboardPage = ({ user }) => {
                     </div>
                   </div>
 
-                  {/* ✅ Tasks (read-only, faculty can delete) */}
+                  {/* ✅ Tasks */}
                   <div className="task-list">
                     {st.tasks.map((t) => (
                       <div key={t.id} className="task-item">
@@ -397,18 +405,22 @@ const AdminDashboardPage = ({ user }) => {
               {/* Notes */}
               <div className="notes-section" style={{ marginTop: 12 }}>
                 <h5>Faculty Notes</h5>
-                {m.notes.map((note) => (
-                  <p key={note.note_id} className="note-meta">
-                    {note.note} — {new Date(note.created_at).toLocaleString()}
-                  </p>
-                ))}
-                <div style={{ display: 'flex', gap: 8 }}>
+                {m.notes && m.notes.length > 0 ? (
+                  m.notes.map((note) => (
+                    <p key={note.note_id} className="note-meta">
+                      {note.note} — {new Date(note.created_at).toLocaleString()}
+                    </p>
+                  ))
+                ) : (
+                  <p className="note-meta">No notes yet.</p>
+                )}
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   <input
                     className="input"
                     type="text"
                     placeholder="Add note..."
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
+                    value={noteInputs[m.id] || ''}
+                    onChange={(e) => setNoteInputs((prev) => ({ ...prev, [m.id]: e.target.value }))}
                   />
                   <button className="btn" onClick={() => handleAddNote(m.id)} disabled={busyOps[`createNote:${m.id}`]}>
                     Add Note
