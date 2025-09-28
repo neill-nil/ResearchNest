@@ -35,7 +35,7 @@ app.use('/api/progress', progressRoutes);
 app.use('/api/faculty', facultyRoutes);
 
 
-// Error handling middleware
+
 app.use((err, req, res, next) => {
     console.error('❌ Error:', err.stack);
     res.status(500).json({ message: 'Something went wrong!', error: err.message });
@@ -43,7 +43,6 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Connect DB and start server
 db.sequelize.authenticate()
     .then(() => {
         console.log('✅ Database connection established.');

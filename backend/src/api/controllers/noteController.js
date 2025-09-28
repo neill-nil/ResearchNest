@@ -1,7 +1,7 @@
 const db = require('../../models');
 const FacultyNote = db.FacultyNote;
 
-// Faculty adds a note
+
 exports.createNote = async (req, res) => {
     try {
         if (req.user.role !== "faculty") {
@@ -15,7 +15,7 @@ exports.createNote = async (req, res) => {
         }
 
         const newNote = await FacultyNote.create({
-            faculty_id: req.user.id,  // from token
+            faculty_id: req.user.id, 
             student_id,
             milestone_id,
             stage_id,
@@ -31,7 +31,7 @@ exports.createNote = async (req, res) => {
     }
 };
 
-//get all notes for a student
+
 exports.getNotesForStudent = async (req, res) => {
     try {
         const { studentId } = req.params;
@@ -47,7 +47,7 @@ exports.getNotesForStudent = async (req, res) => {
     }
 };
 
-// delete a note
+
 exports.deleteNote = async (req, res) => {
     try {
         if (req.user.role !== "faculty") {
@@ -61,7 +61,7 @@ exports.deleteNote = async (req, res) => {
             return res.status(404).json({ message: "Note not found" });
         }
 
-        // Only faculty who created the note can delete it
+
         if (note.faculty_id !== req.user.id) {
             return res.status(403).json({ message: "You can only delete your own notes" });
         }
