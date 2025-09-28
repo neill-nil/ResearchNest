@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   getStudentDashboard,
-  updateSubtaskStatus,
   createTask,
   deleteTask,
   createSubtask,
   deleteSubtask,
+  updateTask,
+  updateSubtask,
 } from '../services/api';
-import './Dashboard.css';
+import Toast from '../components/Toast';
+import '../components/Toast.css';
+import '../styles/Dashboard.css';
 
 const transformData = (backendData) => {
   if (!backendData || !Array.isArray(backendData.milestones)) return { milestones: [] };
@@ -53,15 +56,27 @@ const StudentDashboardPage = ({ user }) => {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newItemNames, setNewItemNames] = useState({});
+  const [toasts, setToasts] = useState([]);
+
+  const pushToast = (message, type = 'info') => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3000);
+  };
+
+  const refreshData = async () => {
+    const { progress, summary, notes } = await getStudentDashboard(user.id);
+    setStudentData(transformData(progress));
+    setSummary(summary);
+    setNotes(notes);
+    setNewItemNames({});
+  };
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         setLoading(true);
-        const { progress, summary, notes } = await getStudentDashboard(user.id);
-        setStudentData(transformData(progress));
-        setSummary(summary);
-        setNotes(notes);
+        await refreshData();
       } finally {
         setLoading(false);
       }
@@ -100,40 +115,49 @@ const StudentDashboardPage = ({ user }) => {
     setNewItemNames((prev) => ({ ...prev, [id]: value }));
   };
 
-  const refreshData = async () => {
-    const { progress, summary, notes } = await getStudentDashboard(user.id);
-    setStudentData(transformData(progress));
-    setSummary(summary);
-    setNotes(notes);
-    setNewItemNames({});
-  };
-
-  const handleStatusChange = async (subtaskId, newStatus) => {
-    await updateSubtaskStatus(subtaskId, newStatus);
-    refreshData();
-  };
-
   const handleCreateTask = async (stageId) => {
     const name = newItemNames[stageId] || '';
     if (!name.trim()) return;
-    await createTask({ stage_id: stageId, name });
+    const { error } = await createTask({ stage_id: stageId, name });
+    if (error) pushToast(error, 'error');
+    else pushToast('Task created', 'success');
     refreshData();
   };
 
   const handleDeleteTask = async (taskId) => {
-    await deleteTask(taskId);
+    const { error } = await deleteTask(taskId);
+    if (error) pushToast(error, 'error');
+    else pushToast('Task deleted', 'success');
+    refreshData();
+  };
+
+  const handleTaskUpdate = async (taskId, updates) => {
+    const { error } = await updateTask(taskId, updates);
+    if (error) pushToast(error, 'error');
+    else pushToast('Task updated', 'success');
     refreshData();
   };
 
   const handleCreateSubtask = async (taskId) => {
     const name = newItemNames[taskId] || '';
     if (!name.trim()) return;
-    await createSubtask({ task_id: taskId, name });
+    const { error } = await createSubtask({ task_id: taskId, name });
+    if (error) pushToast(error, 'error');
+    else pushToast('Subtask created', 'success');
     refreshData();
   };
 
   const handleDeleteSubtask = async (subtaskId) => {
-    await deleteSubtask(subtaskId);
+    const { error } = await deleteSubtask(subtaskId);
+    if (error) pushToast(error, 'error');
+    else pushToast('Subtask deleted', 'success');
+    refreshData();
+  };
+
+  const handleSubtaskUpdate = async (subtaskId, updates) => {
+    const { error } = await updateSubtask(subtaskId, updates);
+    if (error) pushToast(error, 'error');
+    else pushToast('Subtask updated', 'success');
     refreshData();
   };
 
@@ -151,10 +175,10 @@ const StudentDashboardPage = ({ user }) => {
         <div className="summary-card">
           <h3>Milestone Summary</h3>
           <div className="summary-grid">
-            <div className="summary-item"><span>{summary.totalMilestones}</span> Total</div>
-            <div className="summary-item"><span>{summary.completedMilestones}</span> Completed</div>
-            <div className="summary-item"><span>{summary.inProgressMilestones}</span> In Progress</div>
-            <div className="summary-item"><span>{summary.pendingApprovalMilestones}</span> Pending</div>
+            <div className="summary-item"><span>{summary.milestones.total}</span> Total</div>
+            <div className="summary-item"><span>{summary.milestones.byStatus.Completed || 0}</span> Completed</div>
+            <div className="summary-item"><span>{summary.milestones.byStatus['In Progress'] || 0}</span> In Progress</div>
+            <div className="summary-item"><span>{summary.milestones.byStatus['Pending Approval'] || 0}</span> Pending</div>
           </div>
 
           <h3 className="summary-header-secondary">Task Summary</h3>
@@ -188,7 +212,21 @@ const StudentDashboardPage = ({ user }) => {
                   {st.tasks.map((t) => (
                     <div key={t.id} className="task-item">
                       <div className="task-header">
-                        <span>{t.title}</span>
+                        <input
+                          type="text"
+                          value={t.title}
+                          onChange={(e) => handleTaskUpdate(t.id, { name: e.target.value })}
+                          className="editable-input"
+                        />
+                        <select
+                          value={t.status}
+                          onChange={(e) => handleTaskUpdate(t.id, { status: e.target.value })}
+                          className="status-select"
+                        >
+                          <option value="Locked">Locked</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Completed">Completed</option>
+                        </select>
                         <button
                           className="btn btn-danger-outline btn-sm"
                           onClick={() => handleDeleteTask(t.id)}
@@ -201,10 +239,15 @@ const StudentDashboardPage = ({ user }) => {
                       <div className="subtask-list">
                         {t.subtasks.map((sub) => (
                           <div key={sub.id} className="subtask-item">
-                            <span>{sub.title}</span>
+                            <input
+                              type="text"
+                              value={sub.title}
+                              onChange={(e) => handleSubtaskUpdate(sub.id, { name: e.target.value })}
+                              className="editable-input"
+                            />
                             <select
                               value={sub.status}
-                              onChange={(e) => handleStatusChange(sub.id, e.target.value)}
+                              onChange={(e) => handleSubtaskUpdate(sub.id, { status: e.target.value })}
                               className="status-select"
                             >
                               <option value="Locked">Locked</option>
@@ -273,6 +316,18 @@ const StudentDashboardPage = ({ user }) => {
               </div>
             )}
           </div>
+        ))}
+      </div>
+
+      {/* Toast container */}
+      <div className="toast-container">
+        {toasts.map((t) => (
+          <Toast
+            key={t.id}
+            message={t.message}
+            type={t.type}
+            onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
+          />
         ))}
       </div>
     </div>

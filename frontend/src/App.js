@@ -10,6 +10,8 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 // Import Components 
 import ProfileMenu from './components/ProfileMenu';
 import ProfileModal from './components/ProfileModal';
+import Toast from './components/Toast';
+import './components/Toast.css';
 
 // Import API services
 import { loginUser, registerUser, logoutUser, getLoggedInUser } from './services/api';
@@ -18,6 +20,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isProfileModalOpen, setProfileModalOpen] = useState(false);
+  const [toasts, setToasts] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,38 +31,50 @@ function App() {
     setLoading(false);
   }, []);
 
-  const handleLogin = async (credentials) => {
-    try {
-      const response = await loginUser(credentials);
-      setUser(response.user);
+  const pushToast = (message, type = 'info') => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3000);
+  };
 
-      // redirect based on role
-      if (response.user.role === 'student') {
-        navigate('/dashboard');
-      } else if (response.user.role === 'faculty') {
-        navigate('/admin-dashboard');
-      }
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
-      alert(errorMessage);
+  const handleLogin = async (credentials) => {
+    const { data, error } = await loginUser(credentials);
+
+    if (error || !data?.token) {
+      pushToast(error || 'Login failed. Please check your credentials.', 'error');
+      return;
+    }
+
+    setUser(data.user);
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+
+    pushToast('Login successful!', 'success');
+
+    if (data.user.role === 'student') {
+      navigate('/dashboard');
+    } else if (data.user.role === 'faculty') {
+      navigate('/admin-dashboard');
     }
   };
 
   const handleRegister = async (userData) => {
-    try {
-      const response = await registerUser(userData);
-      alert(response.message || "Registration successful!");
-      navigate('/login');
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
-      alert(errorMessage);
+    const { data, error } = await registerUser(userData);
+
+    if (error) {
+      pushToast(error || 'Registration failed. Please try again.', 'error');
+      return;
     }
+
+    pushToast(data.message || 'Registration successful!', 'success');
+    navigate('/login');
   };
 
   const handleLogout = () => {
     logoutUser();
     setUser(null);
     navigate('/login');
+    pushToast('Logged out successfully.', 'info');
   };
 
   const handleProfileClick = () => setProfileModalOpen(true);
@@ -86,11 +101,19 @@ function App() {
         <Routes>
           <Route 
             path="/login" 
-            element={!user ? <LoginPage onLogin={handleLogin} /> : <Navigate to={user.role === 'student' ? "/dashboard" : "/admin-dashboard"} />} 
+            element={
+              !user 
+                ? <LoginPage onLogin={handleLogin} /> 
+                : <Navigate to={user.role === 'student' ? "/dashboard" : "/admin-dashboard"} />
+            } 
           />
           <Route 
             path="/register" 
-            element={!user ? <RegistrationPage onRegister={handleRegister} /> : <Navigate to={user.role === 'student' ? "/dashboard" : "/admin-dashboard"} />} 
+            element={
+              !user 
+                ? <RegistrationPage onRegister={handleRegister} /> 
+                : <Navigate to={user.role === 'student' ? "/dashboard" : "/admin-dashboard"} />
+            } 
           />
 
           {/* Student Dashboard */}
@@ -121,6 +144,18 @@ function App() {
       </main>
 
       {isProfileModalOpen && <ProfileModal user={user} onClose={handleCloseModal} />}
+
+      {/* Toast container */}
+      <div className="toast-container">
+        {toasts.map((t) => (
+          <Toast
+            key={t.id}
+            message={t.message}
+            type={t.type}
+            onClose={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
+          />
+        ))}
+      </div>
     </div>
   );
 }

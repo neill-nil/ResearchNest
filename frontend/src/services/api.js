@@ -13,29 +13,23 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-/* ------------------------- AUTH ------------------------- */
-export const registerUser = async (userData) => {
-  const payload = {
-    name: userData.name,
-    email: userData.email,
-    password: userData.password,
-    role: userData.role,
-  };
-  if (userData.role === 'student') payload.program = userData.program || '';
-  if (userData.role === 'faculty') payload.department = userData.department || '';
-
-  const response = await api.post('/users/register', payload);
-  return response.data;
-};
-
-export const loginUser = async (credentials) => {
-  const response = await api.post('/users/login', credentials);
-  if (response.data.token) {
-    localStorage.setItem('token', response.data.token);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
+// helper wrapper
+const safeRequest = async (fn) => {
+  try {
+    const res = await fn();
+    return { data: res.data, error: null };
+  } catch (err) {
+    const msg = err.response?.data?.message || err.message || "Unexpected error";
+    return { data: null, error: msg };
   }
-  return response.data;
 };
+
+/* ------------------------- AUTH ------------------------- */
+export const registerUser = (userData) =>
+  safeRequest(() => api.post('/users/register', userData));
+
+export const loginUser = (credentials) =>
+  safeRequest(() => api.post('/users/login', credentials));
 
 export const logoutUser = () => {
   localStorage.removeItem('token');
@@ -48,31 +42,21 @@ export const getLoggedInUser = () => {
 };
 
 /* ------------------------- FACULTY ------------------------- */
-export const getAllStudents = async () => {
-  const response = await api.get(`/faculty/students`);
-  return response.data;
-};
+export const getAllStudents = () =>
+  safeRequest(() => api.get(`/faculty/students`));
 
-export const getFacultyMilestones = async (facultyId) => {
-  const response = await api.get(`/faculty/${facultyId}/milestones`);
-  return response.data;
-};
+export const getFacultyMilestones = (facultyId) =>
+  safeRequest(() => api.get(`/faculty/${facultyId}/milestones`));
 
 /* ------------------------- STUDENT PROGRESS ------------------------- */
-export const getStudentProgress = async (studentId) => {
-  const response = await api.get(`/progress/${studentId}`);
-  return response.data;
-};
+export const getStudentProgress = (studentId) =>
+  safeRequest(() => api.get(`/progress/${studentId}`));
 
-export const getStudentSummary = async (studentId) => {
-  const response = await api.get(`/progress/${studentId}/summary`);
-  return response.data;
-};
+export const getStudentSummary = (studentId) =>
+  safeRequest(() => api.get(`/progress/${studentId}/summary`));
 
-export const getStudentNotes = async (studentId) => {
-  const response = await api.get(`/notes/${studentId}`);
-  return response.data;
-};
+export const getStudentNotes = (studentId) =>
+  safeRequest(() => api.get(`/notes/${studentId}`));
 
 export const getStudentDashboard = async (studentId) => {
   const [progress, summary, notes] = await Promise.all([
@@ -80,90 +64,55 @@ export const getStudentDashboard = async (studentId) => {
     getStudentSummary(studentId),
     getStudentNotes(studentId),
   ]);
-  return { progress, summary, notes };
+  return { progress: progress.data, summary: summary.data, notes: notes.data };
 };
 
 /* ------------------------- MILESTONES ------------------------- */
-export const createMilestone = async (milestoneData) => {
-  const response = await api.post('/milestones', milestoneData);
-  return response.data;
-};
+export const createMilestone = (milestoneData) =>
+  safeRequest(() => api.post('/milestones', milestoneData));
 
-export const deleteMilestone = async (milestoneId) => {
-  const response = await api.delete(`/milestones/${milestoneId}`);
-  return response.data;
-};
+export const deleteMilestone = (milestoneId) =>
+  safeRequest(() => api.delete(`/milestones/${milestoneId}`));
 
-export const updateMilestoneStatus = async (milestoneId, status) => {
-  const response = await api.patch(`/milestones/${milestoneId}/status`, { status });
-  return response.data;
-};
+export const updateMilestoneStatus = (milestoneId, status) =>
+  safeRequest(() => api.patch(`/milestones/${milestoneId}/status`, { status }));
 
-export const freezeMilestone = async (milestoneId, freeze) => {
-  const response = await api.patch(`/milestones/${milestoneId}/freeze`, { freeze });
-  return response.data;
-};
+export const freezeMilestone = (milestoneId, freeze) =>
+  safeRequest(() => api.patch(`/milestones/${milestoneId}/freeze`, { freeze }));
 
 /* ------------------------- STAGES ------------------------- */
-export const createStage = async (stageData) => {
-  const response = await api.post('/stages', stageData);
-  return response.data;
-};
+export const createStage = (stageData) =>
+  safeRequest(() => api.post('/stages', stageData));
 
-export const deleteStage = async (stageId) => {
-  const response = await api.delete(`/stages/${stageId}`);
-  return response.data;
-};
+export const deleteStage = (stageId) =>
+  safeRequest(() => api.delete(`/stages/${stageId}`));
 
-export const updateStageStatus = async (stageId, status) => {
-  const response = await api.patch(`/stages/${stageId}/status`, { status });
-  return response.data;
-};
+export const updateStageStatus = (stageId, status) =>
+  safeRequest(() => api.patch(`/stages/${stageId}/status`, { status }));
 
 /* ------------------------- TASKS ------------------------- */
-export const createTask = async (taskData) => {
-  const response = await api.post('/tasks', taskData);
-  return response.data;
-};
+export const createTask = (taskData) =>
+  safeRequest(() => api.post('/tasks', taskData));
 
-export const deleteTask = async (taskId) => {
-  const response = await api.delete(`/tasks/${taskId}`);
-  return response.data;
-};
+export const deleteTask = (taskId) =>
+  safeRequest(() => api.delete(`/tasks/${taskId}`));
 
-export const updateTaskName = async (taskId, name) => {
-  const response = await api.patch(`/tasks/${taskId}`, { name });
-  return response.data;
-};
+export const updateTask = (taskId, updates) =>
+  safeRequest(() => api.patch(`/tasks/${taskId}`, updates));
 
 /* ------------------------- SUBTASKS ------------------------- */
-export const createSubtask = async (subtaskData) => {
-  const response = await api.post('/subtasks', subtaskData);
-  return response.data;
-};
+export const createSubtask = (subtaskData) =>
+  safeRequest(() => api.post('/subtasks', subtaskData));
 
-export const deleteSubtask = async (subtaskId) => {
-  const response = await api.delete(`/subtasks/${subtaskId}`);
-  return response.data;
-};
+export const deleteSubtask = (subtaskId) =>
+  safeRequest(() => api.delete(`/subtasks/${subtaskId}`));
 
-export const updateSubtaskStatus = async (subtaskId, newStatus) => {
-  const response = await api.patch(`/subtasks/${subtaskId}`, { status: newStatus });
-  return response.data;
-};
-
-export const updateSubtaskName = async (subtaskId, name) => {
-  const response = await api.patch(`/subtasks/${subtaskId}`, { name });
-  return response.data;
-};
+export const updateSubtask = (subtaskId, updates) =>
+  safeRequest(() => api.patch(`/subtasks/${subtaskId}`, updates));
 
 /* ------------------------- NOTES ------------------------- */
-export const createNote = async (noteData) => {
-  const response = await api.post('/notes', noteData);
-  return response.data;
-};
+export const createNote = (noteData) =>
+  safeRequest(() => api.post('/notes', noteData));
 
-export const deleteNote = async (noteId) => {
-  const response = await api.delete(`/notes/${noteId}`);
-  return response.data;
-};
+export const deleteNote = (noteId) =>
+  safeRequest(() => api.delete(`/notes/${noteId}`));
