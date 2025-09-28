@@ -11,6 +11,8 @@ import {
   deleteStage,
   updateStageStatus,
   createNote,
+  deleteTask,
+  deleteSubtask,
 } from '../services/api';
 import Toast from '../components/Toast';
 import '../styles/Dashboard.css';
@@ -68,7 +70,6 @@ const AdminDashboardPage = ({ user }) => {
     setToasts((t) => [...t, { id, message, type }]);
   };
   const removeToast = (id) => setToasts((t) => t.filter((x) => x.id !== id));
-
   const setBusy = (key, val) => setBusyOps((s) => ({ ...s, [key]: val }));
 
   useEffect(() => {
@@ -211,6 +212,26 @@ const AdminDashboardPage = ({ user }) => {
     }
   };
 
+  const handleDeleteTask = async (taskId) => {
+    if (!window.confirm('Delete task?')) return;
+    const res = await deleteTask(taskId);
+    if (res.error) pushToast(res.error, 'error');
+    else {
+      pushToast('Task deleted', 'success');
+      await refreshProgress();
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId) => {
+    if (!window.confirm('Delete subtask?')) return;
+    const res = await deleteSubtask(subtaskId);
+    if (res.error) pushToast(res.error, 'error');
+    else {
+      pushToast('Subtask deleted', 'success');
+      await refreshProgress();
+    }
+  };
+
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
@@ -260,7 +281,6 @@ const AdminDashboardPage = ({ user }) => {
 
       {!loading &&
         studentData?.milestones.map((m) => {
-          // faculty should only operate on same-department milestones: backend also enforces but UI learned dept
           const allowed = m.department === user.department;
           return (
             <div key={m.id} className="card-block">
@@ -270,7 +290,7 @@ const AdminDashboardPage = ({ user }) => {
                   <select
                     value={m.status}
                     className="status-select"
-                    onChange={async (e) => handleUpdateMilestoneStatus(m.id, e.target.value)}
+                    onChange={(e) => handleUpdateMilestoneStatus(m.id, e.target.value)}
                     disabled={!allowed || busyOps[`milestoneStatus:${m.id}`]}
                   >
                     <option value="Locked">Locked</option>
@@ -292,7 +312,6 @@ const AdminDashboardPage = ({ user }) => {
                     className="btn small"
                     onClick={() => handleFreezeMilestone(m.id, true)}
                     disabled={!allowed || busyOps[`freeze:${m.id}`]}
-                    title="Freeze milestone"
                   >
                     Freeze
                   </button>
@@ -300,7 +319,6 @@ const AdminDashboardPage = ({ user }) => {
                     className="btn small"
                     onClick={() => handleFreezeMilestone(m.id, false)}
                     disabled={!allowed || busyOps[`freeze:${m.id}`]}
-                    title="Unfreeze milestone"
                   >
                     Unfreeze
                   </button>
@@ -344,6 +362,34 @@ const AdminDashboardPage = ({ user }) => {
                         {busyOps[`deleteStage:${st.id}`] ? 'Deleting...' : 'Delete'}
                       </button>
                     </div>
+                  </div>
+
+                  {/* ✅ Tasks (read-only, faculty can delete) */}
+                  <div className="task-list">
+                    {st.tasks.map((t) => (
+                      <div key={t.id} className="task-item">
+                        <div className="task-header">
+                          <span>{t.title}</span>
+                          <span className="status-badge">{t.status}</span>
+                          <button className="btn small danger" onClick={() => handleDeleteTask(t.id)}>
+                            Delete Task
+                          </button>
+                        </div>
+
+                        {/* Subtasks */}
+                        <div className="subtask-list">
+                          {t.subtasks.map((sub) => (
+                            <div key={sub.id} className="subtask-item">
+                              <span>{sub.title}</span>
+                              <span className="status-badge">{sub.status}</span>
+                              <button className="btn-icon" onClick={() => handleDeleteSubtask(sub.id)}>
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}

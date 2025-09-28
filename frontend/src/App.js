@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import RegistrationPage from './pages/RegistrationPage';
 import StudentDashboardPage from './pages/StudentDashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import './App.css';
 
 // Import Components 
 import ProfileMenu from './components/ProfileMenu';

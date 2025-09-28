@@ -17,7 +17,6 @@ exports.createStage = async (req, res) => {
             return res.status(404).json({ message: "Milestone not found." });
         }
 
-
         if (milestone.department !== req.user.department) {
             return res.status(403).json({ message: "Access denied for this department." });
         }
@@ -58,11 +57,10 @@ exports.getStagesByMilestone = async (req, res) => {
 
 exports.updateStageStatus = async (req, res) => {
     try {
-
         const { id } = req.params;
         const { status } = req.body;
 
-        if (!['In Progress', 'Completed'].includes(status)) {
+        if (!['Locked', 'In Progress', 'Completed'].includes(status)) {
             return res.status(400).json({ message: 'Invalid status provided.' });
         }
         
@@ -71,8 +69,19 @@ exports.updateStageStatus = async (req, res) => {
             return res.status(404).json({ message: "Stage not found." });
         }
 
-        if (stage.Milestone.student_id !== req.user.id) {
-            return res.status(403).json({ message: "Access denied. You can only update your own stages." });
+        // Permission check
+        if (req.user.role === 'student') {
+            // student can only update their own stages
+            if (stage.Milestone.student_id !== req.user.id) {
+                return res.status(403).json({ message: "Access denied. You can only update your own stages." });
+            }
+        } else if (req.user.role === 'faculty') {
+            // faculty can only update stages in their department
+            if (stage.Milestone.department !== req.user.department) {
+                return res.status(403).json({ message: "Access denied. This stage belongs to another department." });
+            }
+        } else {
+            return res.status(403).json({ message: "Unauthorized role." });
         }
         
         stage.status = status;
