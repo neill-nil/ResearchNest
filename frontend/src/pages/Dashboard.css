@@ -497,3 +497,7 @@ body {
   gap: 0.5rem;
   align-items: center;
 }
+.task-completed {
+  background-color: #d4edda; /* light green */
+  border-left: 5px solid #28a745;
+}

@@ -104,7 +104,7 @@ export const deleteMilestone = async (milestoneId) => {
   return response.data;
 };
 
-// ✅ Corrected to match backend route
+// ✅ Corrected route for status update
 export const updateMilestoneStatus = async (milestoneId, status) => {
   const response = await api.patch(`/milestones/${milestoneId}/status`, { status });
   return response.data;
@@ -121,7 +121,7 @@ export const getStagesByMilestone = async (milestoneId) => {
   return response.data;
 };
 
-// ✅ Corrected to include body { status }
+// ✅ Correct route for stage status update
 export const updateStageStatus = async (stageId, status) => {
   const response = await api.patch(`/stages/${stageId}/status`, { status });
   return response.data;
@@ -143,6 +143,7 @@ export const getTasksByStage = async (stageId) => {
   return response.data;
 };
 
+// ✅ Only one updateTask (removed duplicate)
 export const updateTask = async (taskId, updateData) => {
   const response = await api.patch(`/tasks/${taskId}`, updateData);
   return response.data;
