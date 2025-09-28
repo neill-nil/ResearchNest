@@ -53,6 +53,7 @@ flowchart TD
   - Unlock a Milestone  
   - Mark a Milestone as Completed  
   - Freeze/Unfreeze Milestones  
+  - Add Notes
     
 - **Students** can:  
   - Start Milestones (set to In Progress)  
@@ -110,7 +111,7 @@ notes linked to milestones
 
 ---
 
-## 🖼️ Example Solutions Diagram
+## 🖼️ Solutions Diagram
 
 ```mermaid
 graph TD
@@ -134,3 +135,11 @@ graph TD
         B3 --> N[(Notes)]
     end
 ```
+
+### 🗄️ Documents
+
+All documents for SQL vs NoSQl, Merge Conflicts, ER diagrams - done.
+
+Located in Docs folder
+
+---
