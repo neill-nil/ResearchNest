@@ -1,0 +1,88 @@
+.registration-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.registration-card {
+    background: #fff;
+    padding: 2.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+.registration-card h2 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.registration-card p {
+    margin-bottom: 2rem;
+    color: #666;
+}
+
+.input-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #555;
+}
+
+.input-group input, .input-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+    background-color: #fff;
+    font-size: 1rem;
+}
+
+.input-group input:focus, .input-group select:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.register-button {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    background-color: #28a745;
+    color: white;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.register-button:hover {
+    background-color: #218838;
+}
+
+.navigation-link {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.navigation-link span {
+    color: #007bff;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.navigation-link span:hover {
+    text-decoration: underline;
+}
