@@ -174,3 +174,24 @@ export const deleteNote = async (noteId) => {
   const response = await api.delete(`/notes/${noteId}`);
   return response.data;
 };
+// Update milestone status
+export const updateMilestoneStatus = async (milestoneId, status) => {
+  const res = await fetch(`/api/milestones/${milestoneId}/status`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error("Failed to update milestone status");
+  return res.json();
+};
+
+// Update stage status
+export const updateStageStatus = async (stageId, status) => {
+  const res = await fetch(`/api/stages/${stageId}/status`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error("Failed to update stage status");
+  return res.json();
+};

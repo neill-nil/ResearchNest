@@ -1,19 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   getAllStudents,
   getStudentProgress,
-  approveMilestone,
   createMilestone,
   freezeMilestone,
   deleteMilestone,
   createStage,
   deleteStage,
-  createTask,
-  deleteTask,
   createNote,
-  deleteNote
+  deleteNote,
+  updateMilestoneStatus,
+  updateStageStatus,   // <-- add in services/api.js
 } from '../services/api';
-import Milestone from '../components/Milestone';
 import './Dashboard.css';
 
 // --- Transformer ---
@@ -21,17 +19,33 @@ const transformProgressData = (backendData) => {
   if (!backendData || !Array.isArray(backendData.milestones))
     return { ...backendData, milestones: [] };
 
-  const transformSubtasks = (subtasks = []) =>
-    subtasks.map(sub => ({ id: sub.subtask_id, title: sub.name, status: sub.status }));
-
   const transformTasks = (tasks = []) =>
-    tasks.map(task => ({ id: task.task_id, title: task.name, status: task.status, subtasks: transformSubtasks(task.Subtasks) }));
+    tasks.map((task) => ({
+      id: task.task_id,
+      title: task.name,
+      status: task.status,
+      subtasks: (task.Subtasks || []).map((sub) => ({
+        id: sub.subtask_id,
+        title: sub.name,
+        status: sub.status,
+      })),
+    }));
 
   const transformStages = (stages = []) =>
-    stages.map(stage => ({ id: stage.stage_id, title: stage.name, status: stage.status, tasks: transformTasks(stage.Tasks) }));
+    stages.map((stage) => ({
+      id: stage.stage_id,
+      title: stage.name,
+      status: stage.status,
+      tasks: transformTasks(stage.Tasks),
+    }));
 
   const transformMilestones = (milestones = []) =>
-    milestones.map(m => ({ id: m.milestone_id, title: m.name, status: m.status, stages: transformStages(m.Stages) }));
+    milestones.map((m) => ({
+      id: m.milestone_id,
+      title: m.name,
+      status: m.status,
+      stages: transformStages(m.Stages),
+    }));
 
   return { ...backendData, milestones: transformMilestones(backendData.milestones) };
 };
@@ -46,7 +60,6 @@ const AdminDashboardPage = ({ user }) => {
 
   const [newMilestoneName, setNewMilestoneName] = useState('');
   const [newStageName, setNewStageName] = useState('');
-  const [newTaskName, setNewTaskName] = useState('');
   const [newNote, setNewNote] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -92,20 +105,6 @@ const AdminDashboardPage = ({ user }) => {
   }, [selectedStudentId]);
 
   // --- Milestone actions ---
-  const handleOverride = useCallback(async (milestonePath) => {
-    if (!studentData) return;
-    const milestone = studentData.milestones[milestonePath.milestoneIndex];
-    if (window.confirm(`Approve milestone "${milestone.title}"?`)) {
-      try {
-        await approveMilestone(milestone.id);
-        const data = await getStudentProgress(selectedStudentId);
-        setStudentData(transformProgressData(data));
-      } catch {
-        alert('Failed to approve milestone.');
-      }
-    }
-  }, [studentData, selectedStudentId]);
-
   const handleCreateMilestone = async () => {
     if (!selectedStudentId || !newMilestoneName.trim()) {
       alert('Enter milestone name and select a student.');
@@ -117,7 +116,7 @@ const AdminDashboardPage = ({ user }) => {
         name: newMilestoneName,
         student_id: selectedStudentId,
         department: user.department,
-        status: "Locked"
+        status: 'Locked',
       });
       const data = await getStudentProgress(selectedStudentId);
       setStudentData(transformProgressData(data));
@@ -139,7 +138,7 @@ const AdminDashboardPage = ({ user }) => {
     }
   };
 
-  const handleDelete = async (milestoneId) => {
+  const handleDeleteMilestone = async (milestoneId) => {
     if (window.confirm('Delete this milestone?')) {
       try {
         await deleteMilestone(milestoneId);
@@ -159,25 +158,10 @@ const AdminDashboardPage = ({ user }) => {
     setStudentData(transformProgressData(data));
     setNewStageName('');
   };
+
   const handleDeleteStage = async (stageId) => {
     if (window.confirm('Delete this stage?')) {
       await deleteStage(stageId);
-      const data = await getStudentProgress(selectedStudentId);
-      setStudentData(transformProgressData(data));
-    }
-  };
-
-  // --- Task actions ---
-  const handleCreateTask = async (stageId) => {
-    if (!newTaskName.trim()) return;
-    await createTask({ stage_id: stageId, name: newTaskName });
-    const data = await getStudentProgress(selectedStudentId);
-    setStudentData(transformProgressData(data));
-    setNewTaskName('');
-  };
-  const handleDeleteTask = async (taskId) => {
-    if (window.confirm('Delete this task?')) {
-      await deleteTask(taskId);
       const data = await getStudentProgress(selectedStudentId);
       setStudentData(transformProgressData(data));
     }
@@ -189,6 +173,7 @@ const AdminDashboardPage = ({ user }) => {
     await createNote({ student_id: selectedStudentId, milestone_id: milestoneId, note: newNote });
     setNewNote('');
   };
+
   const handleDeleteNote = async (noteId) => {
     await deleteNote(noteId);
   };
@@ -197,7 +182,7 @@ const AdminDashboardPage = ({ user }) => {
   const filteredStudents = students.filter(
     (s) =>
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.student_id?.toString().includes(searchQuery.toLowerCase()))
+      s.student_id?.toString().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -205,16 +190,18 @@ const AdminDashboardPage = ({ user }) => {
       <h2 className="dashboard-title">Faculty Dashboard</h2>
 
       {/* Student selector */}
-      <div className="student-selector-container">
+      <div className="student-selector-container card">
         <input
           type="text"
           placeholder="Search student..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          className="input"
         />
         <select
           value={selectedStudentId}
           onChange={(e) => setSelectedStudentId(e.target.value)}
+          className="input"
         >
           {filteredStudents.map((s) => (
             <option key={s.student_id} value={s.student_id}>
@@ -225,14 +212,15 @@ const AdminDashboardPage = ({ user }) => {
       </div>
 
       {/* Create milestone */}
-      <div className="milestone-create">
+      <div className="milestone-create card">
         <input
           type="text"
           placeholder="Milestone name..."
           value={newMilestoneName}
           onChange={(e) => setNewMilestoneName(e.target.value)}
+          className="input"
         />
-        <button onClick={handleCreateMilestone} disabled={creating}>
+        <button onClick={handleCreateMilestone} disabled={creating} className="btn primary">
           {creating ? 'Creating...' : 'Add Milestone'}
         </button>
       </div>
@@ -241,64 +229,99 @@ const AdminDashboardPage = ({ user }) => {
       {error && <p className="error-message">{error}</p>}
 
       {!loading && studentData && (
-        <>
-          <div className="milestones-container">
-            {studentData.milestones.map((m) => (
-              <div key={m.id} className="milestone-wrapper">
-                <Milestone milestone={m} isAdmin={true} onOverride={handleOverride} />
-                <div className="milestone-controls">
-                  <button onClick={() => handleFreeze(m.id, !m.is_frozen)}>
+        <div className="milestones-container">
+          {studentData.milestones.map((m) => (
+            <div key={m.id} className="milestone-wrapper card">
+              {/* Milestone header */}
+              <div className="milestone-header">
+                <h3>Milestone: {m.title}</h3>
+                <div className="milestone-actions">
+                  <select
+                    value={m.status}
+                    onChange={async (e) => {
+                      await updateMilestoneStatus(m.id, e.target.value);
+                      const data = await getStudentProgress(selectedStudentId);
+                      setStudentData(transformProgressData(data));
+                    }}
+                    className="status-select"
+                  >
+                    <option value="Locked">Locked</option>
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Pending Approval">Pending Approval</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+
+                  <button onClick={() => handleFreeze(m.id, !m.is_frozen)} className="btn small">
                     {m.is_frozen ? 'Unfreeze' : 'Freeze'}
                   </button>
-                  <button onClick={() => handleDelete(m.id)}>Delete</button>
-                </div>
-
-                {/* Stage + Task management */}
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Stage name..."
-                    value={newStageName}
-                    onChange={(e) => setNewStageName(e.target.value)}
-                  />
-                  <button onClick={() => handleCreateStage(m.id)}>Add Stage</button>
-                </div>
-                {m.stages.map((st) => (
-                  <div key={st.id} className="stage-block">
-                    <h4>{st.title}</h4>
-                    <button onClick={() => handleDeleteStage(st.id)}>Delete Stage</button>
-                    <div>
-                      <input
-                        type="text"
-                        placeholder="Task name..."
-                        value={newTaskName}
-                        onChange={(e) => setNewTaskName(e.target.value)}
-                      />
-                      <button onClick={() => handleCreateTask(st.id)}>Add Task</button>
-                    </div>
-                    {st.tasks.map((t) => (
-                      <div key={t.id}>
-                        {t.title}
-                        <button onClick={() => handleDeleteTask(t.id)}>Delete Task</button>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-
-                {/* Notes */}
-                <div className="notes-section">
-                  <input
-                    type="text"
-                    placeholder="Add note..."
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                  />
-                  <button onClick={() => handleAddNote(m.id)}>Add Note</button>
+                  <button onClick={() => handleDeleteMilestone(m.id)} className="btn danger small">
+                    Delete Milestone
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-        </>
+
+              {/* Stage management */}
+              <div className="stage-create">
+                <input
+                  type="text"
+                  placeholder="Stage name..."
+                  value={newStageName}
+                  onChange={(e) => setNewStageName(e.target.value)}
+                  className="input"
+                />
+                <button onClick={() => handleCreateStage(m.id)} className="btn secondary">
+                  Add Stage
+                </button>
+              </div>
+
+              {/* Stage list */}
+              {m.stages.map((st) => (
+                <div key={st.id} className="stage-block">
+                  <div className="stage-row">
+                    <h4 className="stage-title">{st.title}</h4>
+                    <div className="stage-actions">
+                      <select
+                        value={st.status}
+                        onChange={async (e) => {
+                          await updateStageStatus(st.id, e.target.value);
+                          const data = await getStudentProgress(selectedStudentId);
+                          setStudentData(transformProgressData(data));
+                        }}
+                        className="status-select"
+                      >
+                        <option value="Locked">Locked</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                      </select>
+
+                      <button
+                        onClick={() => handleDeleteStage(st.id)}
+                        className="btn danger small"
+                      >
+                        Delete Stage
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Notes */}
+              <div className="notes-section">
+                <input
+                  type="text"
+                  placeholder="Add note..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  className="input"
+                />
+                <button onClick={() => handleAddNote(m.id)} className="btn">
+                  Add Note
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
