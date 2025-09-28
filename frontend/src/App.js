@@ -32,9 +32,11 @@ function App() {
     try {
       const response = await loginUser(credentials);
       setUser(response.user);
+
+      // redirect based on role
       if (response.user.role === 'student') {
         navigate('/dashboard');
-      } else {
+      } else if (response.user.role === 'faculty') {
         navigate('/admin-dashboard');
       }
     } catch (error) {
@@ -42,17 +44,15 @@ function App() {
       alert(errorMessage);
     }
   };
-  
+
   const handleRegister = async (userData) => {
     try {
       const response = await registerUser(userData);
       alert(response.message || "Registration successful!");
       navigate('/login');
     } catch (error) {
-      // --- THIS IS THE UPDATED PART ---
-      // Check if the error object has a detailed message from the backend
       const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
-      alert(errorMessage); // This will now show the specific error
+      alert(errorMessage);
     }
   };
 
@@ -61,7 +61,7 @@ function App() {
     setUser(null);
     navigate('/login');
   };
-  
+
   const handleProfileClick = () => setProfileModalOpen(true);
   const handleCloseModal = () => setProfileModalOpen(false);
 
@@ -73,25 +73,50 @@ function App() {
     <div className="app-container">
       <header className="app-header">
         <h1>ResearchNest</h1>
-        {user && <ProfileMenu user={user} onLogout={handleLogout} onProfileClick={handleProfileClick} />}
+        {user && (
+          <ProfileMenu
+            user={user}
+            onLogout={handleLogout}
+            onProfileClick={handleProfileClick}
+          />
+        )}
       </header>
-      
+
       <main>
         <Routes>
-          <Route path="/login" element={!user ? <LoginPage onLogin={handleLogin} /> : <Navigate to={user.role === 'student' ? "/dashboard" : "/admin-dashboard"} />} />
-          <Route path="/register" element={!user ? <RegistrationPage onRegister={handleRegister} /> : <Navigate to="/dashboard" />} />
-          
+          <Route 
+            path="/login" 
+            element={!user ? <LoginPage onLogin={handleLogin} /> : <Navigate to={user.role === 'student' ? "/dashboard" : "/admin-dashboard"} />} 
+          />
+          <Route 
+            path="/register" 
+            element={!user ? <RegistrationPage onRegister={handleRegister} /> : <Navigate to={user.role === 'student' ? "/dashboard" : "/admin-dashboard"} />} 
+          />
+
+          {/* Student Dashboard */}
           <Route 
             path="/dashboard" 
-            element={user && user.role === 'student' ? <StudentDashboardPage user={user} /> : <Navigate to="/login" />} 
+            element={
+              user && user.role === 'student' 
+                ? <StudentDashboardPage user={user} /> 
+                : <Navigate to="/login" />
+            } 
           />
-          
+
+          {/* Faculty Dashboard */}
           <Route 
             path="/admin-dashboard" 
-            element={user && (user.role === 'faculty' || user.role === 'admin') ? <AdminDashboardPage user={user} /> : <Navigate to="/login" />}
+            element={
+              user && user.role === 'faculty'
+                ? <AdminDashboardPage user={user} />
+                : <Navigate to="/login" />
+            } 
           />
-          
-          <Route path="*" element={<Navigate to={user ? (user.role === 'student' ? "/dashboard" : "/admin-dashboard") : "/login"} />} />
+
+          <Route 
+            path="*" 
+            element={<Navigate to={user ? (user.role === 'student' ? "/dashboard" : "/admin-dashboard") : "/login"} />} 
+          />
         </Routes>
       </main>
 
@@ -101,4 +126,3 @@ function App() {
 }
 
 export default App;
-

@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { getStudentProgress, updateSubtaskStatus } from '../services/api';
+import { getStudentDashboard, updateSubtaskStatus } from '../services/api';
 import Milestone from '../components/Milestone';
 import './Dashboard.css';
 
-/**
- * A transformer function to convert the backend data structure
- * into the structure the frontend components expect.
- * This is essential for compatibility between the frontend and backend.
- */
+// Transformer to adapt backend → frontend
 const transformData = (backendData) => {
   if (!backendData || !Array.isArray(backendData.milestones)) {
-    return { ...backendData, milestones: [] }; // Ensure milestones is always an array
+    return { ...backendData, milestones: [] };
   }
 
-  const transformSubtasks = (subtasks = []) => 
+  const transformSubtasks = (subtasks = []) =>
     subtasks.map(sub => ({
       id: sub.subtask_id,
       title: sub.name,
@@ -43,54 +39,57 @@ const transformData = (backendData) => {
       status: milestone.status,
       stages: transformStages(milestone.Stages),
     }));
-  
+
   return {
     ...backendData,
     milestones: transformMilestones(backendData.milestones),
   };
 };
 
-
-const StudentDashboardPage = ({ userId }) => {
+const StudentDashboardPage = ({ user }) => {
   const [studentData, setStudentData] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // A simplified data fetching effect, closer to your original code's structure.
-    const fetchStudentData = async () => {
-      if (!userId) {
-        setLoading(false);
-        return;
-      }
-      
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchDashboard = async () => {
       try {
         setLoading(true);
-        const data = await getStudentProgress(userId);
-        const transformedData = transformData(data);
-        setStudentData(transformedData);
+        const { progress, summary, notes } = await getStudentDashboard(user.id);
+        setStudentData(transformData(progress));
+        setSummary(summary);
+        setNotes(notes);
       } catch (err) {
-        console.error("Failed to fetch student data:", err);
+        console.error("Failed to fetch student dashboard:", err);
         setError(err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStudentData();
-  }, [userId]); // This effect runs whenever the userId changes.
+    fetchDashboard();
+  }, [user]);
 
   const handleStatusChange = async (path, newStatus) => {
     if (path.subtaskIndex !== undefined && studentData) {
       const subtask = studentData.milestones[path.milestoneIndex]
-                        .stages[path.stageIndex]
-                        .tasks[path.taskIndex]
-                        .subtasks[path.subtaskIndex];
+        .stages[path.stageIndex]
+        .tasks[path.taskIndex]
+        .subtasks[path.subtaskIndex];
+
       try {
         await updateSubtaskStatus(subtask.id, newStatus);
-        // Re-fetch data to ensure all parent statuses are updated
-        const data = await getStudentProgress(userId);
-        setStudentData(transformData(data));
+
+        // Re-fetch to update parent statuses too
+        const { progress } = await getStudentDashboard(user.id);
+        setStudentData(transformData(progress));
       } catch (err) {
         console.error("Failed to update subtask:", err);
         alert("Could not update the subtask status.");
@@ -103,27 +102,47 @@ const StudentDashboardPage = ({ userId }) => {
   }
 
   if (error) {
-    return <div className="dashboard-message error">Could not load student data. Please try again later.</div>;
-  }
-
-  // Handle case for new users with no milestones assigned
-  if (!studentData || studentData.milestones.length === 0) {
     return (
-        <div className="dashboard-container">
-            <h2 className="dashboard-title">Welcome, {studentData?.name || 'Student'}</h2>
-            <div className="dashboard-message info">
-                <h3>Your journey begins now!</h3>
-                <p>It looks like there are no milestones assigned to you yet. A faculty member will create your progress plan soon.</p>
-            </div>
-        </div>
+      <div className="dashboard-message error">
+        Could not load student data. Please try again later.
+      </div>
     );
   }
 
-  // This is the main display, just like your old version, which shows the milestones.
+  if (!studentData || studentData.milestones.length === 0) {
+    return (
+      <div className="dashboard-container">
+        <h2 className="dashboard-title">Welcome, {studentData?.name || user.name}</h2>
+        <div className="dashboard-message info">
+          <h3>Your journey begins now!</h3>
+          <p>
+            It looks like there are no milestones assigned to you yet. A faculty
+            member will create your progress plan soon.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-container">
-      <h2 className="dashboard-title">Welcome, {studentData.name}</h2>
+      <h2 className="dashboard-title">Welcome, {user.name}</h2>
       <p className="dashboard-subtitle">Here is your academic progress track.</p>
+
+      {/* ✅ Summary Section */}
+      {summary && (
+        <div className="summary-section">
+          <h3>Progress Summary</h3>
+          <ul>
+            <li>Total milestones: {summary.totalMilestones}</li>
+            <li>Completed: {summary.completedMilestones}</li>
+            <li>In Progress: {summary.inProgressMilestones}</li>
+            <li>Pending Approval: {summary.pendingApprovalMilestones}</li>
+          </ul>
+        </div>
+      )}
+
+      {/* ✅ Milestones Tree */}
       <div className="milestones-container">
         {studentData.milestones.map((milestone, index) => (
           <Milestone
@@ -131,14 +150,30 @@ const StudentDashboardPage = ({ userId }) => {
             milestone={milestone}
             milestoneIndex={index}
             onStatusChange={handleStatusChange}
-            isLocked={index > 0 && studentData.milestones[index - 1].status !== 'Completed'}
+            isLocked={
+              index > 0 &&
+              studentData.milestones[index - 1].status !== 'Completed'
+            }
             isAdmin={false}
           />
         ))}
       </div>
+
+      {/* ✅ Notes Section */}
+      {notes.length > 0 && (
+        <div className="notes-section">
+          <h3>Faculty Notes</h3>
+          <ul>
+            {notes.map((note) => (
+              <li key={note.note_id}>
+                <strong>{note.created_at}:</strong> {note.note}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
 
 export default StudentDashboardPage;
-
