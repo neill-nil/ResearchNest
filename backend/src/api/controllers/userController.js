@@ -89,51 +89,55 @@ exports.register = async (req, res) => {
 
 
 exports.login = async (req, res) => {
-    try {
-        const { role, email, password } = req.body;
+  try {
+    const { role, email, password } = req.body;
 
-        if (!role || !email || !password) {
-            return res.status(400).json({ message: "Missing required fields" });
-        }
-
-        const Model = getModel(role);
-
-        // find user
-        const user = await Model.findOne({ where: { email } });
-        if (!user) {
-            return res.status(404).json({ message: `${role} not found` });
-        }
-
-        // check password
-        const isMatch = await bcrypt.compare(password, user.password_hash);
-        if (!isMatch) {
-            return res.status(401).json({ message: "Invalid credentials" });
-        }
-
-        // issue JWT
-        const token = jwt.sign(
-            {
-                id: user.student_id || user.faculty_id,
-                email: user.email,
-                role,
-                ...(role === "faculty" && { department: user.department })
-            },
-            JWT_SECRET,
-            { expiresIn: "1h" }
-        );
-
-        return res.json({
-            message: "Login successful",
-            token,
-            user: {
-                id: user.student_id || user.faculty_id,
-                name: user.name,
-                email: user.email,
-                role
-            }
-        });
-    } catch (err) {
-        console.error("❌ Login error:", err);
-        return res.status(500).json({ message: "Login failed", error: err.message });
+    if (!role || !email || !password) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
+
+    const Model = getModel(role);
+
+    // find user
+    const user = await Model.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ message: `${role} not found` });
+    }
+
+    // check password
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // issue JWT
+    const token = jwt.sign(
+      {
+        id: user.student_id || user.faculty_id,
+        email: user.email,
+        role,
+        ...(role === "faculty" && { department: user.department }),
+        ...(role === "student" && { program: user.program })
+      },
+      JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    return res.json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user.student_id || user.faculty_id,
+        name: user.name,
+        email: user.email,
+        role,
+        ...(role === "faculty" && { department: user.department }),
+        ...(role === "student" && { program: user.program })
+      }
+    });
+  } catch (err) {
+    console.error("❌ Login error:", err);
+    return res.status(500).json({ message: "Login failed", error: err.message });
+  }
 };
+

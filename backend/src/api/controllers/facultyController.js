@@ -128,3 +128,16 @@ exports.getDepartmentProgress = async (req, res) => {
     }
 };
 
+exports.getAllStudents = async (req, res) => {
+  try {
+    if (req.user.role !== "faculty") {
+      return res.status(403).json({ message: "Only faculty can access this." });
+    }
+
+    const students = await Student.findAll();
+    return res.json({ students });
+  } catch (err) {
+    console.error("❌ Get all students error:", err);
+    return res.status(500).json({ message: "Failed to fetch students", error: err.message });
+  }
+};

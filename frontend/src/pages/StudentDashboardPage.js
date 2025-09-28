@@ -1,49 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { getStudentDashboard, updateSubtaskStatus } from '../services/api';
+import {
+  getStudentDashboard,
+  updateSubtaskStatus,
+  createTask,
+  deleteTask,
+  createSubtask,
+  deleteSubtask,
+  createNote
+} from '../services/api';
 import Milestone from '../components/Milestone';
 import './Dashboard.css';
 
-// Transformer to adapt backend → frontend
 const transformData = (backendData) => {
   if (!backendData || !Array.isArray(backendData.milestones)) {
     return { ...backendData, milestones: [] };
   }
 
   const transformSubtasks = (subtasks = []) =>
-    subtasks.map(sub => ({
-      id: sub.subtask_id,
-      title: sub.name,
-      status: sub.status,
-    }));
+    subtasks.map(sub => ({ id: sub.subtask_id, title: sub.name, status: sub.status }));
 
   const transformTasks = (tasks = []) =>
-    tasks.map(task => ({
-      id: task.task_id,
-      title: task.name,
-      status: task.status,
-      subtasks: transformSubtasks(task.Subtasks),
-    }));
+    tasks.map(task => ({ id: task.task_id, title: task.name, status: task.status, subtasks: transformSubtasks(task.Subtasks) }));
 
   const transformStages = (stages = []) =>
-    stages.map(stage => ({
-      id: stage.stage_id,
-      title: stage.name,
-      status: stage.status,
-      tasks: transformTasks(stage.Tasks),
-    }));
+    stages.map(stage => ({ id: stage.stage_id, title: stage.name, status: stage.status, tasks: transformTasks(stage.Tasks) }));
 
   const transformMilestones = (milestones = []) =>
-    milestones.map(milestone => ({
-      id: milestone.milestone_id,
-      title: milestone.name,
-      status: milestone.status,
-      stages: transformStages(milestone.Stages),
-    }));
+    milestones.map(milestone => ({ id: milestone.milestone_id, title: milestone.name, status: milestone.status, stages: transformStages(milestone.Stages) }));
 
-  return {
-    ...backendData,
-    milestones: transformMilestones(backendData.milestones),
-  };
+  return { ...backendData, milestones: transformMilestones(backendData.milestones) };
 };
 
 const StudentDashboardPage = ({ user }) => {
@@ -51,14 +36,11 @@ const StudentDashboardPage = ({ user }) => {
   const [summary, setSummary] = useState(null);
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [newTaskName, setNewTaskName] = useState('');
+  const [newSubtaskName, setNewSubtaskName] = useState('');
+  const [newNote, setNewNote] = useState('');
 
   useEffect(() => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
     const fetchDashboard = async () => {
       try {
         setLoading(true);
@@ -66,70 +48,65 @@ const StudentDashboardPage = ({ user }) => {
         setStudentData(transformData(progress));
         setSummary(summary);
         setNotes(notes);
-      } catch (err) {
-        console.error("Failed to fetch student dashboard:", err);
-        setError(err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchDashboard();
   }, [user]);
 
-  const handleStatusChange = async (path, newStatus) => {
-    if (path.subtaskIndex !== undefined && studentData) {
-      const subtask = studentData.milestones[path.milestoneIndex]
-        .stages[path.stageIndex]
-        .tasks[path.taskIndex]
-        .subtasks[path.subtaskIndex];
-
-      try {
-        await updateSubtaskStatus(subtask.id, newStatus);
-
-        // Re-fetch to update parent statuses too
-        const { progress } = await getStudentDashboard(user.id);
-        setStudentData(transformData(progress));
-      } catch (err) {
-        console.error("Failed to update subtask:", err);
-        alert("Could not update the subtask status.");
-      }
-    }
+  const refreshData = async () => {
+    const { progress, summary, notes } = await getStudentDashboard(user.id);
+    setStudentData(transformData(progress));
+    setSummary(summary);
+    setNotes(notes);
   };
 
-  if (loading) {
-    return <div className="dashboard-message">Loading student data...</div>;
-  }
+  const handleStatusChange = async (path, newStatus) => {
+    const subtask = studentData.milestones[path.milestoneIndex]
+      .stages[path.stageIndex]
+      .tasks[path.taskIndex]
+      .subtasks[path.subtaskIndex];
+    await updateSubtaskStatus(subtask.id, newStatus);
+    refreshData();
+  };
 
-  if (error) {
-    return (
-      <div className="dashboard-message error">
-        Could not load student data. Please try again later.
-      </div>
-    );
-  }
+  const handleCreateTask = async (stageId) => {
+    if (!newTaskName.trim()) return;
+    await createTask({ stage_id: stageId, name: newTaskName });
+    refreshData();
+    setNewTaskName('');
+  };
 
-  if (!studentData || studentData.milestones.length === 0) {
-    return (
-      <div className="dashboard-container">
-        <h2 className="dashboard-title">Welcome, {studentData?.name || user.name}</h2>
-        <div className="dashboard-message info">
-          <h3>Your journey begins now!</h3>
-          <p>
-            It looks like there are no milestones assigned to you yet. A faculty
-            member will create your progress plan soon.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const handleDeleteTask = async (taskId) => {
+    await deleteTask(taskId);
+    refreshData();
+  };
+
+  const handleCreateSubtask = async (taskId) => {
+    if (!newSubtaskName.trim()) return;
+    await createSubtask({ task_id: taskId, name: newSubtaskName });
+    refreshData();
+    setNewSubtaskName('');
+  };
+
+  const handleDeleteSubtask = async (subtaskId) => {
+    await deleteSubtask(subtaskId);
+    refreshData();
+  };
+
+  const handleAddNote = async (milestoneId) => {
+    if (!newNote.trim()) return;
+    await createNote({ student_id: user.id, milestone_id: milestoneId, note: newNote });
+    refreshData();
+    setNewNote('');
+  };
+
+  if (loading) return <div>Loading student data...</div>;
 
   return (
     <div className="dashboard-container">
-      <h2 className="dashboard-title">Welcome, {user.name}</h2>
-      <p className="dashboard-subtitle">Here is your academic progress track.</p>
-
-      {/* ✅ Summary Section */}
+      <h2>Welcome, {user.name}</h2>
       {summary && (
         <div className="summary-section">
           <h3>Progress Summary</h3>
@@ -142,32 +119,62 @@ const StudentDashboardPage = ({ user }) => {
         </div>
       )}
 
-      {/* ✅ Milestones Tree */}
       <div className="milestones-container">
-        {studentData.milestones.map((milestone, index) => (
-          <Milestone
-            key={milestone.id}
-            milestone={milestone}
-            milestoneIndex={index}
-            onStatusChange={handleStatusChange}
-            isLocked={
-              index > 0 &&
-              studentData.milestones[index - 1].status !== 'Completed'
-            }
-            isAdmin={false}
-          />
+        {studentData.milestones.map((m) => (
+          <div key={m.id} className="milestone-wrapper">
+            <Milestone milestone={m} onStatusChange={handleStatusChange} isAdmin={false} />
+            {m.stages.map((st) => (
+              <div key={st.id} className="stage-block">
+                <input
+                  type="text"
+                  placeholder="Task name..."
+                  value={newTaskName}
+                  onChange={(e) => setNewTaskName(e.target.value)}
+                />
+                <button onClick={() => handleCreateTask(st.id)}>Add Task</button>
+                {st.tasks.map((t) => (
+                  <div key={t.id}>
+                    {t.title}
+                    <button onClick={() => handleDeleteTask(t.id)}>Delete Task</button>
+                    <input
+                      type="text"
+                      placeholder="Subtask name..."
+                      value={newSubtaskName}
+                      onChange={(e) => setNewSubtaskName(e.target.value)}
+                    />
+                    <button onClick={() => handleCreateSubtask(t.id)}>Add Subtask</button>
+                    {t.subtasks.map((sub) => (
+                      <div key={sub.id}>
+                        {sub.title} ({sub.status})
+                        <button onClick={() => handleDeleteSubtask(sub.id)}>Delete</button>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+
+            {/* Notes */}
+            <div className="notes-section">
+              <input
+                type="text"
+                placeholder="Add note..."
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+              />
+              <button onClick={() => handleAddNote(m.id)}>Add Note</button>
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* ✅ Notes Section */}
+      {/* Existing Notes */}
       {notes.length > 0 && (
         <div className="notes-section">
           <h3>Faculty Notes</h3>
           <ul>
             {notes.map((note) => (
-              <li key={note.note_id}>
-                <strong>{note.created_at}:</strong> {note.note}
-              </li>
+              <li key={note.note_id}>{note.note}</li>
             ))}
           </ul>
         </div>

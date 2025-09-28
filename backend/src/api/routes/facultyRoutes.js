@@ -11,5 +11,6 @@ router.get('/:id/milestones', authenticateToken, facultyController.getDepartment
 
 // List deparment wise all details
 router.get('/:id/progress', authenticateToken, facultyController.getDepartmentProgress);
+router.get('/students', authenticateToken, facultyController.getAllStudents);
 
 module.exports = router;
