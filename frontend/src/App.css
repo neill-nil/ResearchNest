@@ -1,46 +1,38 @@
-
-.app-container {
+/* Main App container */
+.app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #f0f2f5;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #f4f7f6;
 }
 
+/* Header Styling */
 .app-header {
-  background-color: #ffffff;
-  padding: 1rem 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #ddd;
+  padding: 1rem 2rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .app-header h1 {
-  color: #333;
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
+  color: #2c3e50;
+  font-weight: 600;
 }
 
-.logout-button {
-  background-color: #ff4d4f;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.3s ease;
-}
-
-.logout-button:hover {
-  background-color: #d63c3e;
-}
-
-.app-main {
-  flex-grow: 1;
-  padding: 2rem;
-  display: flex;
-  justify-content: center;
+/* Main content area styling */
+.main-content {
+  flex-grow: 1; /* Allows this area to take up remaining vertical space */
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto; /* Center the content */
+  box-sizing: border-box;
 }
