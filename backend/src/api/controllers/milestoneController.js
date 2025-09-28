@@ -2,7 +2,7 @@ const db = require('../../models');
 const Milestone = db.Milestone;
 const Stage = db.Stage;
 
-// Faculty creates a milestone for a student
+
 exports.createMilestone = async (req, res) => {
     try {
         if (req.user.role !== 'faculty') {
@@ -27,7 +27,7 @@ exports.createMilestone = async (req, res) => {
     }
 };
 
-// Get all milestones for a student
+
 exports.getMilestonesByStudent = async (req, res) => {
     try {
         const { studentId } = req.params;
@@ -54,7 +54,7 @@ exports.updateStatus = async (req, res) => {
         const milestone = await Milestone.findByPk(id);
         if (!milestone) return res.status(404).json({ message: "Milestone not found" });
 
-        // Restrict student updates
+     
         if (role === "student" && status === "Open") {
             return res.status(403).json({ message: "Only faculty can set milestone to Open" });
         }
