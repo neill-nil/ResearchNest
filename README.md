@@ -90,6 +90,9 @@ npm install
 npm start
 ```
 
+### ENV
+ Create a .env file in BE folder using the .env file given as reference.
+
 ### 🗄️ Database (SQL)
 Recommended: PostgreSQL or MySQL.
 
