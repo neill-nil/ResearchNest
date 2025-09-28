@@ -89,24 +89,18 @@ export const createMilestone = async (milestoneData) => {
   return response.data;
 };
 
-export const approveMilestone = async (milestoneId) => {
-  const response = await api.patch(`/milestones/${milestoneId}/approve`);
-  return response.data;
-};
-
-export const freezeMilestone = async (milestoneId, freeze) => {
-  const response = await api.patch(`/milestones/${milestoneId}/freeze`, { freeze });
-  return response.data;
-};
-
 export const deleteMilestone = async (milestoneId) => {
   const response = await api.delete(`/milestones/${milestoneId}`);
   return response.data;
 };
 
-// ✅ Corrected to match backend route
 export const updateMilestoneStatus = async (milestoneId, status) => {
   const response = await api.patch(`/milestones/${milestoneId}/status`, { status });
+  return response.data;
+};
+
+export const freezeMilestone = async (milestoneId, freeze) => {
+  const response = await api.patch(`/milestones/${milestoneId}/freeze`, { freeze });
   return response.data;
 };
 
@@ -116,19 +110,13 @@ export const createStage = async (stageData) => {
   return response.data;
 };
 
-export const getStagesByMilestone = async (milestoneId) => {
-  const response = await api.get(`/stages/${milestoneId}`);
-  return response.data;
-};
-
-// ✅ Corrected to include body { status }
-export const updateStageStatus = async (stageId, status) => {
-  const response = await api.patch(`/stages/${stageId}/status`, { status });
-  return response.data;
-};
-
 export const deleteStage = async (stageId) => {
   const response = await api.delete(`/stages/${stageId}`);
+  return response.data;
+};
+
+export const updateStageStatus = async (stageId, status) => {
+  const response = await api.patch(`/stages/${stageId}/status`, { status });
   return response.data;
 };
 
@@ -138,18 +126,13 @@ export const createTask = async (taskData) => {
   return response.data;
 };
 
-export const getTasksByStage = async (stageId) => {
-  const response = await api.get(`/tasks/${stageId}`);
-  return response.data;
-};
-
-export const updateTask = async (taskId, updateData) => {
-  const response = await api.patch(`/tasks/${taskId}`, updateData);
-  return response.data;
-};
-
 export const deleteTask = async (taskId) => {
   const response = await api.delete(`/tasks/${taskId}`);
+  return response.data;
+};
+
+export const updateTaskName = async (taskId, name) => {
+  const response = await api.patch(`/tasks/${taskId}`, { name });
   return response.data;
 };
 
@@ -159,8 +142,8 @@ export const createSubtask = async (subtaskData) => {
   return response.data;
 };
 
-export const getSubtasksByTask = async (taskId) => {
-  const response = await api.get(`/subtasks/${taskId}`);
+export const deleteSubtask = async (subtaskId) => {
+  const response = await api.delete(`/subtasks/${subtaskId}`);
   return response.data;
 };
 
@@ -169,8 +152,8 @@ export const updateSubtaskStatus = async (subtaskId, newStatus) => {
   return response.data;
 };
 
-export const deleteSubtask = async (subtaskId) => {
-  const response = await api.delete(`/subtasks/${subtaskId}`);
+export const updateSubtaskName = async (subtaskId, name) => {
+  const response = await api.patch(`/subtasks/${subtaskId}`, { name });
   return response.data;
 };
 
